@@ -71,6 +71,43 @@ public class MainController {
         return "model.html";
     }
 
+
+    @RequestMapping(value="modify",produces = "application/json;charset=UTF-8",method = RequestMethod.GET)
+    public @ResponseBody JSONObject get_model(HttpServletRequest request) throws SQLException{
+        Connection conn=DBConnection.getConn();
+        String user=Login.isLogin(request);
+        String field=request.getParameter("field");
+        if(user==null)
+            return null;
+        //json
+        JSONObject json=new JSONObject();
+        List<JSONObject> concepts=new ArrayList<>();
+
+        String sql1="select * from `field` where `domain`='"+field+"'";
+        Statement stmt1=conn.createStatement();
+        ResultSet rs1=stmt1.executeQuery(sql1);
+        if(rs1.next()){
+            json.put("field",field);
+            String[] seeds= rs1.getString("seed").split(" ");
+            json.put("field_seed",seeds);
+        }
+        stmt1.close();
+        String sql2="select * from "+user+"_"+field+"_concept";
+        Statement stmt2=conn.createStatement();
+        ResultSet rs2=stmt2.executeQuery(sql2);
+        while(rs2.next()){
+            JSONObject c=new JSONObject();
+            c.put("concept",rs2.getString("concept_word"));
+            String[] c_seeds=rs2.getString("seed_word").split(" ");
+            c.put("seeds",c_seeds);
+            concepts.add(c);
+        }
+        json.put("concepts",concepts);
+        stmt2.close();
+        conn.close();
+        return json;
+    }
+
     @RequestMapping(value="model.html",method = RequestMethod.POST)
     public void build_model(HttpServletRequest request, HttpServletResponse response) throws SQLException, IOException {
         Connection conn=DBConnection.getConn();
