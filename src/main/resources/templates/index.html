@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="领域词抽取系统">
+    <meta name="keywords" content="领域词抽取系统">
+    <title>领域词抽取系统</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/uikit.css">
+    <script src="/js/jquery-3.4.1.min.js" type="text/javascript"></script>
+    <script src="/js/uikit.js" type="text/javascript"></script>
+    <script src="/js/Logout.js" type="text/javascript"></script>
+    <script>
+        $(function(){
+            $("#create").click(function(){
+                $(location).attr("href","model.html");
+            });
+            $.get("field_info", function (data, status) {
+                var i;
+                for (i in data["field"]) {
+                    $("#field_list").append($('<ul class="field_table">\n' +
+                        '                          <li class="item">'+data["field"][i]+'</li>\n' +
+                        '                          <li class="item"><a href="model.html?field='+data["field"][i]+'">领域信息管理</a></li>\n' +
+                        '                          <li class="item"><a href="corpus.html?field='+data["field"][i]+'">语料管理</a></li>\n' +
+                        '                          <li class="item"><a href="task.html?field='+data["field"][i]+'">任务管理</a></li>\n' +
+                        '                          <li class="item"><a href="#">领域词库管理</a></li>\n' +
+                        '                          <li class="item"><a href="#">概念词库管理</a></li>\n' +
+                        '                      </ul>'));
+                }
+            });
+            $("#login").click(function () {
+                $(location).attr("href","login.html");
+            });
+            $("#register").click(function () {
+                $(location).attr("href","register.html");
+            });
+        });
+
+    </script>
+</head>
+<body>
+<div class="uk-card uk-card-default uk-card-large uk-card-body" style="padding: 0">
+    <div class="top">
+        <div class="title">
+            <img id="icon" src="/image/icon.png">
+            <h1 id=title>领域词抽取系统</h1>
+        </div>
+        <div class="user">
+            <div id="log_reg" th:if="${#lists.isEmpty(iscookies)}">
+                <button id="login" class="user_info">登录</button>
+                <p class="separator">|</p>
+                <button id="register" class="user_info">注册</button>
+            </div>
+            <div id="greet_out" th:unless="${#lists.isEmpty(iscookies)}">
+                <p id="greet" class="user_info" th:text="'你好，'+${user_name}"></p>
+                <p class="separator">|</p>
+                <button id="logout" class="user_info" onclick="logout()">登出</button>
+            </div>
+        </div>
+    </div>
+</div>
+<nav class="uk-navbar-container" uk-navbar>
+    <div class="uk-navbar-left">
+        <ul class="uk-navbar-nav">
+            <li class="uk-active"><a>首页</a></li>
+        </ul>
+    </div>
+</nav>
+    <section id="main">
+        <div class="create-field"><button id="create" class="uk-button-primary">构建领域</button></div>   
+        <div id="field_list">
+        </div>
+    </section>
+</body>
+</html>

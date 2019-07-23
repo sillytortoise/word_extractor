@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/uikit.min.css">
+    <title>登录</title>
+    <style>
+        .info{
+            margin-left: 0;
+            margin-right: 0;
+            margin-top: 30px;
+            height: 30px;
+            border: 0px;
+            background-color: #d8eafc;
+            font-size: 14px;
+            font-family: "Microsoft YaHei";
+            color: #999999;
+        }
+        input:focus{
+            border-color: #66afe9;
+            outline: 0;
+            -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(102,175,233,.6);
+            box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(102,175,233,.6)
+        }
+    </style>
+    <script src="/js/jquery-3.4.1.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        $(function(){
+            $("input").focus(function () {
+               this.select();
+            });
+            $(document).keyup(function (e) {
+                if(e.keyCode==13){
+                    $("#field_info").submit();
+                }
+            })
+        })
+    </script>
+</head>
+<body>
+<div class="uk-card uk-card-default uk-card-large uk-card-body" style="padding: 0">
+    <div class="top">
+        <div class="title" style="margin-outside: 0;margin-left: 0">
+            <img id="icon" src="image/icon.png">
+            <h1 id=title>领域词抽取系统</h1>
+        </div>
+    </div>
+</div>
+<nav class="uk-navbar">
+    <ul class="uk-navbar-nav">
+        <li class="uk-active"><a href="index.html">首页</a></li>
+        <li class="uk-active"><a href="">></a></li>
+        <li class="uk-active"><a href="model.html">登录</a></li>
+    </ul>
+</nav>
+<section id="main">
+    <form id="field_info" method="post">
+        <div class="uk-card uk-card-default uk-card-large uk-card-body login" style="margin: 0 auto">
+            <div style="margin: 0 auto;width:55px">
+                <h3 class="uk-card-title" style="width: 50px;margin: 0">登录</h3>
+            </div>
+            <div>
+                <div style="width:190px;margin: 0 auto">
+                    <div style="width:200px">
+                        <img src="/image/user.png" style="height: 32px;width: 30px;margin-top: -2px"/>
+                        <input name="user" class="info" value="用户名">
+                    </div>
+                    <div style="width:200px">
+                        <img src="/image/password.png" style="height: 32px;width: 30px;margin-top: -2px"/>
+                        <input name="passwd" class="info" type="password"/>
+                    </div>
+                </div>
+            </div>
+            <div style="width:100px;margin: 0 auto;margin-top: 30px">
+                <input class="uk-button-primary" style="width: 100px;height:40px;font-size: 14pt;font-family: 'Microsoft YaHei'" value="登 录" type="submit">
+            </div>
+        </div>
+    </form>
+</section>
+</body>
+</html>

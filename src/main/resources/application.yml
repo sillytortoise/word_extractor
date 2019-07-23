@@ -1,0 +1,18 @@
+server:
+  port: 8880 #端口号
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/knowledge?serverTimezone=UTC
+    username: root
+    password: 980115
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 1024MB
+      max-request-size: 1024MB
+
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml  #注意：一定要对应mapper映射xml文件的所在路径
+  type-aliases-package: com.winterchen.model  # 注意：对应实体类的路径
