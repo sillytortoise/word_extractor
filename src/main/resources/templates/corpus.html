@@ -33,6 +33,12 @@
         }
         $(function () {
             getCorpus();
+            $("#login").click(function(){
+                $(location).attr("href","login.html");
+            });
+            $("#register").click(function(){
+                $(location).attr("href","login.html");
+            });
         });
     </script>
 </head>
@@ -45,7 +51,7 @@
         </div>
         <div class="user">
             <div id="log_reg" th:if="${#lists.isEmpty(iscookies)}">
-                <button id="login" class="user_info" onclick="logout()">登录</button>
+                <button id="login" class="user_info">登录</button>
                 <p class="separator">|</p>
                 <button id="register" class="user_info">注册</button>
             </div>

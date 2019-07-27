@@ -23,7 +23,7 @@ import java.util.List;
 
 @Controller
 public class MainController {
-    public static final String rootdir="~/IdeaProjects/corpus";
+    public static final String rootdir="/home/steve/IdeaProjects/corpus";
 
     @RequestMapping(value="/",method = RequestMethod.GET)
     public String root(){
@@ -116,84 +116,158 @@ public class MainController {
             return;
         response.setContentType("text/html; charset=utf-8");
         PrintWriter out=response.getWriter();
-        String field_name=request.getParameter("field_name_input");
+        String new_field_name = request.getParameter("field_name_input");
         //领域名为空
-        if(field_name.equals("")){
+        if (new_field_name.equals("")) {
             out.print("<script>alert('领域名不能为空！');</script>");
             return;
         }
-        //领域已经存在
-        String s1="select * from `field` where `uid`=? and `domain`=?";
-        PreparedStatement p1=conn.prepareStatement(s1);
-        p1.setString(1,user_id);
-        p1.setString(2,field_name);
-        ResultSet rs1=p1.executeQuery();
-        if(rs1.next()){
-            out.print("<script>alert('领域重复！');</script>");
-            return;
-        }
-        //获取领域种子词
-        int count1=1;
-        String seed_list="";
-        for(;count1<=100;count1++){
-            if(request.getParameter("field_seed_input" + count1)!=null) {
-                String seed_word = request.getParameter("field_seed_input" + count1);
-                seed_list += " " + seed_word;
+        if (request.getParameter("field") == null) {       //新建
+            //获取领域种子词
+            int count1 = 1;
+            String seed_list = "";
+            for (; count1 <= 100; count1++) {
+                if (request.getParameter("field_seed_input" + count1) != null) {
+                    String seed_word = request.getParameter("field_seed_input" + count1);
+                    seed_list += " " + seed_word;
+                }
             }
-        }
-        seed_list=seed_list.trim();
-        String s2="insert into `field` values(?,?,?)";
-        PreparedStatement p2=conn.prepareStatement(s2);
-        p2.setString(1,user_id);
-        p2.setString(2,field_name);
-        p2.setString(3,seed_list);
-        int r1=p2.executeUpdate();
-        if(r1==0){
-            out.print("<script>alert('构建失败！');</script>");
-            return;
-        }
-        //创建领域概念表
-        String table_name=user_id+"_"+field_name+"_concept";
-        String s3="create table "+table_name+"(" +
-                "concept_word varchar(50),"+
-                "seed_word varchar(200),"+
-                "unique(concept_word,seed_word)"+
-                ")";
-        Statement stmt1=conn.createStatement();
-        stmt1.executeUpdate(s3);
-        String s4="create table "+user_id+"_"+field_name+"_corpus("+
-                "fname varchar(200) primary key,"+
-                "fsize varchar(20),"+
-                "uptime char(19))";
-        Statement stmt2=conn.createStatement();
-        stmt2.executeQuery(s4);
-        //处理概念
-        int count2=1;
-        int count_concept=0;
-        for(;count2<=100;count2++) {
-            if (request.getParameter("concept_name_input" + count2) != null) {
-                count_concept++;
-                String concept = request.getParameter("concept_name_input" + count2);
-                String concept_seed_list = "";
-                int count3 = 1;
-                for(;count3<=100;count3++) {
-                    if (request.getParameter("concept" + count2 + "_seed" + count3) != null) {
-                        concept_seed_list += " "+request.getParameter("concept" + count2 + "_seed" + count3);
+            seed_list = seed_list.trim();
+            String s2 = "insert into `field` values(?,?,?)";
+            PreparedStatement p2 = conn.prepareStatement(s2);
+            p2.setString(1, user_id);
+            p2.setString(2, new_field_name);
+            p2.setString(3, seed_list);
+            int r1 = p2.executeUpdate();
+            if (r1 == 0) {
+                out.print("<script>alert('构建失败！');</script>");
+                return;
+            }
+            //创建领域概念表
+            String table_name = user_id + "_" + new_field_name + "_concept";
+            String s3 = "create table " + table_name + "(" +
+                    "concept_word varchar(50)," +
+                    "seed_word varchar(200)," +
+                    "unique(concept_word,seed_word)" +
+                    ")";
+            Statement stmt1 = conn.createStatement();
+            stmt1.executeUpdate(s3);
+            String s4 = "create table " + user_id + "_" + new_field_name + "_corpus(" +
+                    "fname varchar(200) primary key," +
+                    "fsize varchar(20)," +
+                    "uptime char(19))";
+            Statement stmt2 = conn.createStatement();
+            stmt2.execute(s4);
+            //处理概念
+            int count2 = 1;
+            int count_concept = 0;
+            for (; count2 <= 100; count2++) {
+                if (request.getParameter("concept_name_input" + count2) != null) {
+                    count_concept++;
+                    String concept = request.getParameter("concept_name_input" + count2);
+                    String concept_seed_list = "";
+                    int count3 = 1;
+                    for (; count3 <= 100; count3++) {
+                        if (request.getParameter("concept" + count2 + "_seed" + count3) != null) {
+                            concept_seed_list += " " + request.getParameter("concept" + count2 + "_seed" + count3);
+                        }
+                    }
+                    concept_seed_list = concept_seed_list.trim();
+                    String insert_concept = "insert into " + table_name + " values(?,?)";
+                    PreparedStatement p3 = conn.prepareStatement(insert_concept);
+                    p3.setString(1, concept);
+                    p3.setString(2, concept_seed_list);
+                    int result = p3.executeUpdate();
+                    if (result == 0) {
+                        out.print("<script>alert('概念" + count_concept + "构建失败！');</script>");
                     }
                 }
-                concept_seed_list=concept_seed_list.trim();
-                String insert_concept = "insert into " + table_name + " values(?,?)";
-                PreparedStatement p3 = conn.prepareStatement(insert_concept);
-                p3.setString(1, concept);
-                p3.setString(2, concept_seed_list);
-                int result = p3.executeUpdate();
-                if (result == 0) {
-                    out.print("<script>alert('概念"+count_concept+"构建失败！');</script>");
+            }
+            conn.close();
+            out.print("<script>alert('构建成功！');</script>");
+        } else {
+            //获取领域种子词
+            String field_name = request.getParameter("field");
+            int count1 = 1;
+            String seed_list = "";
+            for (; count1 <= 100; count1++) {
+                if (request.getParameter("field_seed_input" + count1) != null) {
+                    String seed_word = request.getParameter("field_seed_input" + count1);
+                    seed_list += " " + seed_word;
                 }
             }
+            seed_list = seed_list.trim();
+            String s2 = "update `field` set `domain`=?,`seed`=? where `uid`=? and `domain`=?";
+            PreparedStatement p2 = conn.prepareStatement(s2);
+            p2.setString(1, new_field_name);
+            p2.setString(2, seed_list);
+            p2.setString(3, user_id);
+            p2.setString(4, field_name);
+            int r1 = p2.executeUpdate();
+            if (r1 == 0) {
+                out.print("<script>alert('构建失败！');</script>");
+                return;
+            }
+            if (!field_name.equals(new_field_name)) {        //领域名发生变化
+                try {
+                    //修改概念表名、语料表名
+                    conn.setAutoCommit(false);
+                    String s3 = "rename table `" + user_id + "_" + field_name + "_concept` to `" + user_id + "_" + new_field_name + "_concept`";
+                    Statement stmt1 = conn.createStatement();
+                    stmt1.execute(s3);
+                    String s4 = "rename table `" + user_id + "_" + field_name + "_corpus` to `" + user_id + "_" + new_field_name + "_corpus";
+                    stmt1.execute(s4);
+                    conn.commit();
+                    out.print("\"<script>alert('修改成功！');</script>\"");
+                } catch (Exception se) {
+                    conn.rollback();
+                    out.print("\"<script>alert('修改失败！');</script>\"");
+                }
+            } else {
+                int count2 = 1;
+                int count_concept = 0;
+                String table_name = user_id + "_" + new_field_name + "_concept";
+                String stop_safe = "SET SQL_SAFE_UPDATES = 0";
+                String del = "delete from " + table_name;
+                try {
+                    //Assume a valid connection object conn
+                    conn.setAutoCommit(false);
+                    Statement stmt = conn.createStatement();
+                    stmt.execute(stop_safe);
+                    stmt.executeUpdate(del);
+                    for (; count2 <= 100; count2++) {
+                        if (request.getParameter("concept_name_input" + count2) != null) {
+                            count_concept++;
+                            String concept = request.getParameter("concept_name_input" + count2);
+                            String concept_seed_list = "";
+                            int count3 = 1;
+                            for (; count3 <= 100; count3++) {
+                                if (request.getParameter("concept" + count2 + "_seed" + count3) != null) {
+                                    concept_seed_list += " " + request.getParameter("concept" + count2 + "_seed" + count3);
+                                }
+                            }
+                            concept_seed_list = concept_seed_list.trim();
+                            String insert_concept = "insert into " + table_name + " values(?,?)";
+                            PreparedStatement p3 = conn.prepareStatement(insert_concept);
+                            p3.setString(1, concept);
+                            p3.setString(2, concept_seed_list);
+                            int result = p3.executeUpdate();
+                            if (result == 0) {
+                                out.print("<script>alert('概念" + count_concept + "构建失败！');</script>");
+                            }
+                        }
+                    }
+
+                    conn.commit();
+                } catch (SQLException se) {
+                    out.print("<script>alert('概念" + count_concept + "构建失败！');</script>");
+                    conn.rollback();
+                }
+
+                conn.close();
+                out.print("<script>alert('修改成功！');</script>");
+            }
         }
-        conn.close();
-        out.print("<script>alert('构建成功！');</script>");
     }
 
     @RequestMapping(value="corpus.html",method = RequestMethod.GET)
@@ -388,7 +462,7 @@ public class MainController {
         ArrayList<JSONObject> list = new ArrayList<>();
         JSONObject json=new JSONObject();
         try {
-            FileReader fr = new FileReader(rootdir + "/"+user+"/"+"microeconomic_concepts_baike(with score).txt");
+            FileReader fr = new FileReader(rootdir + "/"+user+"/"+"baike_short.txt");
             BufferedReader bf = new BufferedReader(fr);
             String str;
             // 按行读取字符串
@@ -398,6 +472,7 @@ public class MainController {
                 JSONObject item=new JSONObject();
                 item.put("entity",s[0]);
                 item.put("point",Double.parseDouble(s[s.length-1]));
+                item.put("selected",false);
                 list.add(item);
             }
             bf.close();
