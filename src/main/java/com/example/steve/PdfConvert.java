@@ -8,21 +8,11 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 
 
-public class PdfConvert implements GenerateTxt {
+public class PdfConvert {
 
-    private String mpdf_path;
-
-    public PdfConvert() {}
-
-    public PdfConvert(String path) {
-        mpdf_path = path;
-    }
-
-    @Override
-    public void generateTxt() {
+    public static void generateTxt(String user_corpus_path, String mpdf_path) {
         String result = null;
         PDDocument document = null;
-
         try {
             FileInputStream fis = new FileInputStream(mpdf_path);
             PDFParser parser = new PDFParser(new RandomAccessBuffer(fis));
@@ -31,7 +21,7 @@ public class PdfConvert implements GenerateTxt {
             System.out.print(document);
             PDFTextStripper stripper = new PDFTextStripper();
             result = stripper.getText(document);
-            FileWriter fw = new FileWriter(result_folder +
+            FileWriter fw = new FileWriter(user_corpus_path + "/" +
                     mpdf_path.substring(mpdf_path.lastIndexOf("/") + 1, mpdf_path.lastIndexOf(".")) +
                     ".txt", false);
             fw.write(result);
@@ -43,8 +33,4 @@ public class PdfConvert implements GenerateTxt {
         }
     }
 
-    public static void main(String[] args) {
-        PdfConvert convert = new PdfConvert();
-        convert.generateTxt();
-    }
 }

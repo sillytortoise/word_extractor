@@ -24,7 +24,7 @@
             $("#task_table td").each(function(){
                 $(this).remove();
             });
-            $.get("task?uid="+GetQueryString("uid")+"&field="+GetQueryString("field"),function(data,status){
+            $.get("task?field=" + GetQueryString("field"), function (data, status) {
                 var i;
                 for(i in data["tasks"]) {
                     $("#task_table").append($('<tr>' +

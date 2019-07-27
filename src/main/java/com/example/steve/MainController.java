@@ -289,15 +289,12 @@ public class MainController {
             for (MultipartFile file : new_files) {
                 String name = file.getOriginalFilename();
                 long size = file.getSize();
-                //如果以txt结尾
-                if (name.endsWith(".txt")) {
-                    String file_path = rootdir + "/" + uid + "/" + name;
-                    File new_file = new File(file_path);
-                    if (!new_file.exists()) {
-                        new_file.mkdirs();
-                    }
-                    file.transferTo(new_file);
+                String file_path = rootdir + "/" + uid + "/" + request.getParameter("field") + "/row_doc/" + name;
+                File new_file = new File(file_path);
+                if (!new_file.exists()) {
+                    new_file.createNewFile();
                 }
+                file.transferTo(new_file);
                 String sd = getTime();
                 String add_corpus = "insert into " + uid + "_" + request.getParameter("field") + "_corpus" + " values(?,?,?)";
                 PreparedStatement ptmt = conn.prepareStatement(add_corpus);
@@ -439,6 +436,13 @@ public class MainController {
             ptmt.executeUpdate();
             ptmt.close();
             conn.close();
+            String[] corpus_selected = files.split("[+]");
+            for (String s : corpus_selected) {
+                if (s.endsWith(".doc") || s.endsWith(".docx")) {
+                    WordConvert.generateTxt(rootdir + "/" + user + "/" + field,
+                            rootdir + "/" + user + "/" + field + "/row_doc/" + s);
+                }
+            }
             return "task.html";
         }
         return "login.html";
