@@ -17,13 +17,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.Null;
 import java.sql.*;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.Date;
-import java.util.List;
 
 @Controller
 public class MainController {
-    public static final String rootdir="/home/steve/IdeaProjects/corpus";
 
     @RequestMapping(value="/",method = RequestMethod.GET)
     public String root(){
@@ -184,6 +182,7 @@ public class MainController {
                 }
             }
             conn.close();
+            new File(SteveApplication.rootdir + "/" + user_id + "/" + new_field_name + "/row_doc").mkdirs();
             out.print("<script>alert('构建成功！');</script>");
         } else {
             //获取领域种子词
@@ -289,7 +288,7 @@ public class MainController {
             for (MultipartFile file : new_files) {
                 String name = file.getOriginalFilename();
                 long size = file.getSize();
-                String file_path = rootdir + "/" + uid + "/" + request.getParameter("field") + "/row_doc/" + name;
+                String file_path = SteveApplication.rootdir + "/" + uid + "/" + request.getParameter("field") + "/row_doc/" + name;
                 File new_file = new File(file_path);
                 if (!new_file.exists()) {
                     new_file.createNewFile();
@@ -362,6 +361,7 @@ public class MainController {
                 task.put("files", files);
                 task.put("task_time", rs.getString("task_time"));
                 task.put("statu", rs.getString("statu"));
+                task.put("finish_time", rs.getString("finish_time"));
                 task_list.add(task);
             }
             jsonObject.put("tasks", task_list);
@@ -425,24 +425,25 @@ public class MainController {
                     num = Integer.parseInt(r1.getString("task_name").substring(4)) + 1;
                 }
             }
-            String sql = "insert into " + user + "_task values(?,?,?,?,?,?)";
+            String sql = "insert into " + user + "_task values(?,?,?,?,?,?,?)";
             PreparedStatement ptmt = conn.prepareStatement(sql);
             ptmt.setString(1, field);
             ptmt.setString(2, symbol + num);
             ptmt.setString(3, files);
             ptmt.setString(4, getTime());
-            ptmt.setString(5, "未完成");
-            ptmt.setString(6, null);
+            ptmt.setString(5, null);
+            ptmt.setString(6, "未完成");
+            ptmt.setString(7, null);
             ptmt.executeUpdate();
             ptmt.close();
             conn.close();
-            String[] corpus_selected = files.split("[+]");
-            for (String s : corpus_selected) {
-                if (s.endsWith(".doc") || s.endsWith(".docx")) {
-                    WordConvert.generateTxt(rootdir + "/" + user + "/" + field,
-                            rootdir + "/" + user + "/" + field + "/row_doc/" + s);
-                }
+            if (SteveApplication.taskPool.containsKey(user)) {
+                SteveApplication.taskPool.get(user).add(field + ":" + symbol + num);
+            } else {
+                SteveApplication.taskPool.put(user, new ArrayList<>());
+                SteveApplication.taskPool.get(user).add(field + ":" + symbol + num);
             }
+
             return "task.html";
         }
         return "login.html";
@@ -466,7 +467,7 @@ public class MainController {
         ArrayList<JSONObject> list = new ArrayList<>();
         JSONObject json=new JSONObject();
         try {
-            FileReader fr = new FileReader(rootdir + "/"+user+"/"+"baike_short.txt");
+            FileReader fr = new FileReader(SteveApplication.rootdir + "/" + user + "/" + "baike_short.txt");
             BufferedReader bf = new BufferedReader(fr);
             String str;
             // 按行读取字符串
@@ -503,7 +504,7 @@ public class MainController {
         return size;
     }
 
-    public String getTime(){
+    public static String getTime() {
         Long time_stamp=System.currentTimeMillis();
         SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return sdf.format(new Date(Long.parseLong(String.valueOf(time_stamp))));      // 时间戳转换成时间

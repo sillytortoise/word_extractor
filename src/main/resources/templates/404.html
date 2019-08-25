@@ -1,10 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns="http://www.w3.org/1999/html">
 <head>
     <meta charset="UTF-8">
-    <title>$Title$</title>
+    <meta name="description" content="领域词抽取系统">
+    <meta name="keywords" content="领域词抽取系统">
+    <title>页面丢失</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/uikit.css">
+    <script src="/js/jquery-3.4.1.min.js" type="text/javascript"></script>
+    <script src="/js/uikit.js" type="text/javascript"></script>
+    <script src="/js/Logout.js" type="text/javascript"></script>
+    <script>
+        $(function () {
+            $("#login").click(function () {
+                $(location).attr("href", "login.html");
+            });
+            $("#register").click(function () {
+                $(location).attr("href", "register.html");
+            });
+        });
+
+    </script>
 </head>
 <body>
-$END$
+<div class="uk-card uk-card-default uk-card-large uk-card-body" style="padding: 0">
+    <div class="top">
+        <div class="title">
+            <img id="icon" src="/image/icon.png">
+            <h1 id=title>领域词抽取系统</h1>
+        </div>
+        <div class="user">
+            <div id="log_reg" th:if="${#lists.isEmpty(iscookies)}">
+                <button id="login" class="user_info">登录</button>
+                <p class="separator">|</p>
+                <button id="register" class="user_info">注册</button>
+            </div>
+            <div id="greet_out" th:unless="${#lists.isEmpty(iscookies)}">
+                <p id="greet" class="user_info" th:text="'你好，'+${user_name}"></p>
+                <p class="separator">|</p>
+                <button id="logout" class="user_info" onclick="logout()">登出</button>
+            </div>
+        </div>
+    </div>
+</div>
+<nav class="uk-navbar-container" uk-navbar>
+    <div class="uk-navbar-left">
+        <ul class="uk-navbar-nav">
+            <li><a href="index.html">首页</a></li>
+            <li class="uk-active"><a>页面丢失</a></li>
+        </ul>
+    </div>
+</nav>
+<section id="main">
+    <div style="width:760px;height: 488px;margin:0 auto">
+        <img src="/image/页面不存在.png"/>
+    </div>
+</section>
 </body>
 </html>

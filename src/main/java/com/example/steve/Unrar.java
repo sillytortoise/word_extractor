@@ -11,7 +11,7 @@ public class Unrar {
      **destDir 目标路径
      **所有路径须是unix格式
      */
-    private static List<String> unrarToDest(String sourceRar, String destDir) {
+    public static List<String> unrarToDest(String sourceRar, String destDir) {
         String cmd = "unrar x -o+ " + sourceRar + " " + destDir;
         String result = null;
         String parent_path = sourceRar.substring(0, sourceRar.lastIndexOf('/'));
@@ -36,7 +36,7 @@ public class Unrar {
         return list;
     }
 
-    public static void generateTxt(String user_corpus_path, String path) {
+    public static void generateTxt(String user_corpus_path, String path) {  //user_corpus_path存放processed.txt path是文件夹路径
         File folder = new File(path);
         File[] files = folder.listFiles();
         ArrayList<File> list = new ArrayList<>();

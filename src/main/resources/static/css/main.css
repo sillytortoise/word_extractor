@@ -198,7 +198,8 @@ tr{
 
 #task_table td, th{
     font-size:1em;
-    width:20%;
+    position: relative;
+    width: 16%;
     border:1px solid #98bf21;
     padding:3px 7px 2px 7px;
 }

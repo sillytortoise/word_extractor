@@ -17,6 +17,7 @@ public class WordConvert {
                 InputStream is = new FileInputStream(new File(path));
                 WordExtractor ex = new WordExtractor(is);
                 buffer.append(ex.getText());
+                is.close();
                 ex.close();
             } else if (path.endsWith("docx")) {
                 OPCPackage opcPackage = POIXMLDocument.openPackage(path);

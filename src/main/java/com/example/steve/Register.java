@@ -21,7 +21,8 @@ public class Register {
     }
 
     @RequestMapping(value="register.html",produces ="application/json;charset=UTF-8",method = RequestMethod.POST)
-    public @ResponseBody JSONObject register(@RequestBody String data) throws SQLException {
+    public @ResponseBody
+    JSONObject register(@RequestBody String data) throws SQLException, IOException, InterruptedException {
         Connection conn=DBConnection.getConn();
         String user_name=JSONObject.parseObject(data).get("user").toString();
         JSONObject json=new JSONObject();
@@ -71,6 +72,8 @@ public class Register {
             json.put("error",5);
             conn.rollback();//回滚事务
         }
+        Runtime.getRuntime().exec("mkdir " + SteveApplication.rootdir + "/" + user_name).waitFor();
+
         json.put("error",0);
         return json;
     }

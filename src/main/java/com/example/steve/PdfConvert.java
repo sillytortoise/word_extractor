@@ -27,6 +27,7 @@ public class PdfConvert {
             fw.write(result);
             fw.flush();
             fw.close();
+            document.close();
 
         } catch (Exception e) {
             e.printStackTrace();
