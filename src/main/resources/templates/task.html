@@ -27,38 +27,66 @@
             $.get("task?field=" + GetQueryString("field"), function (data, status) {
                 var i;
                 for(i in data["tasks"]) {
-                    $("#task_table").append($('<tr>' +
-                        '                          <td>'+data["tasks"][i]["domain"]+'：'+data["tasks"][i]["task_name"]+'</td>' +
-                        '                          <td>'+data["tasks"][i]["files"]+'</td>'+
-                        '                          <td>'+data["tasks"][i]["task_time"]+'</td>'+
-                        '                          <td>'+data["tasks"][i]["statu"]+'</td>'+
-                        '                          <td></td>'+
-                        '                          <td>' + data["tasks"][i]["finish_time"] + '</td>' +
-                        '                      </tr>'));
+                    if(data["tasks"][i]["task_name"].charAt(0)=='领') {
+                        $("#task_table").append($('<tr>' +
+                            '                          <td>' + data["tasks"][i]["domain"] + '：' + data["tasks"][i]["task_name"] + '</td>' +
+                            '                          <td>' + data["tasks"][i]["files"] + '</td>' +
+                            '                          <td>' + data["tasks"][i]["task_time"] + '</td>' +
+                            '                          <td>' + data["tasks"][i]["statu"] + '</td>' +
+                            '                          <td><a href="result.html?field=' + GetQueryString("field") + '&name=' + data["tasks"][i]["task_name"] + '">' + (data["tasks"][i]["statu"] == '已完成' ? '查看结果' : '') + '</a></td>' +
+                            '                          <td>' + data["tasks"][i]["finish_time"] + '</td>' +
+                            '                      </tr>'));
+                    }
+                    else if(data["tasks"][i]["task_name"].charAt(0)=='基'){
+                        $("#task_table").append($('<tr>' +
+                            '                          <td>' + data["tasks"][i]["domain"] + '：' + data["tasks"][i]["task_name"] + '</td>' +
+                            '                          <td>' + data["tasks"][i]["files"] + '</td>' +
+                            '                          <td>' + data["tasks"][i]["task_time"] + '</td>' +
+                            '                          <td>' + data["tasks"][i]["statu"] + '</td>' +
+                            '                          <td><a href="result-baike.html?field=' + GetQueryString("field") + '&name=' + data["tasks"][i]["task_name"] + '">' + (data["tasks"][i]["statu"] == '已完成' ? '查看结果' : '') + '</a></td>' +
+                            '                          <td>' + data["tasks"][i]["finish_time"] + '</td>' +
+                            '                      </tr>'));
+                    }
+                    else{
+                        $("#task_table").append($('<tr>' +
+                            '                          <td>' + data["tasks"][i]["domain"] + '：' + data["tasks"][i]["task_name"] + '</td>' +
+                            '                          <td>' + data["tasks"][i]["files"] + '</td>' +
+                            '                          <td>' + data["tasks"][i]["task_time"] + '</td>' +
+                            '                          <td>' + data["tasks"][i]["statu"] + '</td>' +
+                            '                          <td><a href="result-entity.html?field=' + GetQueryString("field") + '&name=' + data["tasks"][i]["task_name"] + '">' + (data["tasks"][i]["statu"] == '已完成' ? '查看结果' : '') + '</a></td>' +
+                            '                          <td>' + data["tasks"][i]["finish_time"] + '</td>' +
+                            '                      </tr>'));
+                    }
                 }
             });
         }
 
 
-        function show(obj) {
+        function show() {
             $("#float_window").css('display','block');
-            if($(obj).attr("id")=='task-btn1'){}
-            else if($(obj).attr("id")=='task-btn2'){task_type=2;}
-            else{task_type=3;}
         }
 
         function close_window() {
             $("#float_window").css('display','none');
         }
         //提交语料选择创建任务
-        function create_task(){
+        function create_task(e){
             var obj=document.getElementsByName("box");
             var str='';
-            var i=0;
-            for(i in obj){
-                if(obj[i].checked){
-                    str+=$(obj[i]).parent().next().text()+",";          //以逗号分隔不同文件名
+            if($(e).attr("id")=='sub_btn') {
+                task_type=1;
+                var i = 0;
+                for (i in obj) {
+                    if (obj[i].checked) {
+                        str += $(obj[i]).parent().next().text() + ",";          //以逗号分隔不同文件名
+                    }
                 }
+            }
+            else if($(e).attr("id")=='task-btn2'){
+                task_type=2;
+            }
+            else{
+                task_type=3;
             }
             $.ajax(
                 {
@@ -68,7 +96,25 @@
                     contentType: "application/json;charset=UTF-8",
                     success: function(data) {
                         if(data.msg="success"){
-                            alert("提交成功");
+                            console.log(data);
+                            if(data.stat==0){
+                                $(location).attr("href","login.html");
+                            }
+                            else if(task_type==2 && data.stat==1){
+                                alert("创建失败，请设置种子词或进行领域词抽取！");
+                            }
+                            else if(task_type==2 && data.stat==2){
+                                alert("创建成功!");
+                            }
+                            else if(task_type==3 && data.stat==3){
+                                alert("没有设置概念!")
+                            }
+                            else if(task_type==3 && data.stat==4){
+                                alert("创建失败，请添加领域词库！")
+                            }
+                            else if(task_type==3 && data.stat==5){
+                                alert("创建成功!");
+                            }
                             close_window();
                             getTask();
                         }else{
@@ -144,9 +190,9 @@
         <p class="tips">创建【实体扩充】任务前需先完成前置任务【领域词抽取】或/与【基于百科的抽取任务】并将结果入库，并在领域信息页面设置概念词</p>
     </div>
     <div id="upload">
-        <button class="uk-button-primary" id="task-btn1" onclick="show(this)">创建领域词抽取任务</button>
-        <button class="uk-button-primary" id="task-btn2" onclick="show(this)">创建基于百科的抽取任务</button>
-        <button class="uk-button-primary" id="task-btn3" onclick="show(this)">创建实体扩充任务</button>
+        <button class="uk-button-primary" id="task-btn1" onclick="show()">创建领域词抽取任务</button>
+        <button class="uk-button-primary" id="task-btn2" onclick="create_task(this)">创建基于百科的抽取任务</button>
+        <button class="uk-button-primary" id="task-btn3" onclick="create_task(this)">创建实体扩充任务</button>
     </div>
     <div>
         <table class="uk-table-striped" border="1" id="task_table">
@@ -175,7 +221,7 @@
                     <th class="time">上传时间</th>
                 </tr>
             </table>
-            <input id="sub_btn" type="submit" value="确认" class="uk-button-primary" onclick="create_task()"/>
+            <input id="sub_btn" type="submit" value="确认" class="uk-button-primary" onclick="create_task(this)"/>
         </div>
     </div>
 </section>

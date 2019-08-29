@@ -18,14 +18,20 @@
             $.get("field_info", function (data, status) {
                 var i;
                 for (i in data["field"]) {
+                    var field_lib_path;
+                    if(data.field[i].isextracted){
+                        field_lib_path="fieldlib.html?field="+data.field[i].fieldname;
+                    }
+                    else field_lib_path="#";
                     $("#field_list").append($('<ul class="field_table">\n' +
-                        '                          <li class="item">'+data["field"][i]+'</li>\n' +
-                        '                          <li class="item"><a href="model.html?field='+data["field"][i]+'">领域信息管理</a></li>\n' +
-                        '                          <li class="item"><a href="corpus.html?field='+data["field"][i]+'">语料管理</a></li>\n' +
-                        '                          <li class="item"><a href="task.html?field='+data["field"][i]+'">任务管理</a></li>\n' +
-                        '                          <li class="item"><a href="#">领域词库管理</a></li>\n' +
+                        '                          <li class="item">'+data.field[i].fieldname+'</li>\n' +
+                        '                          <li class="item"><a href="model.html?field='+data.field[i].fieldname+'">领域信息管理</a></li>\n' +
+                        '                          <li class="item"><a href="corpus.html?field='+data.field[i].fieldname+'">语料管理</a></li>\n' +
+                        '                          <li class="item"><a href="task.html?field='+data.field[i].fieldname+'">任务管理</a></li>\n' +
+                        '                          <li class="item"><a href="'+field_lib_path+'">领域词库管理</a></li>\n' +
                         '                          <li class="item"><a href="#">概念词库管理</a></li>\n' +
                         '                      </ul>'));
+
                 }
             });
             $("#login").click(function () {

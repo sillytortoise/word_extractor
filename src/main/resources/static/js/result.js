@@ -2,14 +2,84 @@ var items;
 var target_page;        //当前在哪页
 var item_num;           //可以显示多少条
 
+function GetQueryString(name) {
+    var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+    var r = window.location.search.substr(1).match(reg);
+    if (r != null)
+        return decodeURI(r[2]);
+    return null;
+}
+
+function show_new() {
+    items.item.sort(function (a, b) {
+        if(a.isnew==b.isnew)
+            return 0;
+        else if(a.isnew==true && b.isnew==false)
+            return -1;
+        else return 1;
+    });
+    var i;
+    for(i=0;items["item"][i].isnew==true;i++){}
+    item_num=i;
+    target_page=1;
+    clearPage();
+    getPage(1);
+    regulatePage(1);
+    $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
+}
+
+function show_all(){
+    item_num=items.item.length;
+    clearPage();
+    getPage(1);
+    regulatePage(1);
+    $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
+}
+
+function add_items() {
+    var result_items = new Array();
+    for (var i = 0; i < items.item.length; i++) {
+        if (items.item[i].isnew == true && items.item[i].selected == true) {
+            var item = {};
+            item.point = items.item[i].point;
+            item.entity = items.item[i].entity;
+            result_items.push(item);
+        }
+    }
+    var result = {};
+    result.item = result_items;
+    $.ajax({
+        type: "POST",
+        url: "result.html?field=" + GetQueryString("field"),
+        contentType: "application/json;charset=utf-8",
+        data: JSON.stringify(result),
+        success: function () {
+            alert("提交成功!");
+            $(location).attr("href", "fieldlib.html?field=" + GetQueryString("field"));
+        },
+        error: function (message) {
+            console.log(message);
+        }
+    });
+}
+
 function getPage(page){
     for(var i=(page-1)*10; i<page*10 && i<items["item"].length && i<item_num;i++){
-        $("#result_table").append($('<tr>' +
-            '                           <td class="order">'+(i+1)+'</td>'+
-            '                           <td class="entity">'+items["item"][i]["entity"]+'</td>'+
-            '                           <td class="point">'+items["item"][i]["point"]+'</td>'+
-            '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>'+
-            '                       </tr>'));
+        if (items["item"][i]["isnew"]) {          //高亮显示
+            $("#result_table").append($('<tr>' +
+                '                           <td class="order" style="color: #1e87f0">' + (i + 1) + '</td>' +
+                '                           <td class="entity" style="color: #1e87f0">' + items["item"][i]["entity"] + '</td>' +
+                '                           <td class="point" style="color: #1e87f0">' + items["item"][i]["point"] + '</td>' +
+                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
+                '                       </tr>'));
+        } else {
+            $("#result_table").append($('<tr>' +
+                '                           <td class="order">' + (i + 1) + '</td>' +
+                '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
+                '                           <td class="point">' + items["item"][i]["point"] + '</td>' +
+                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
+                '                       </tr>'));
+        }
         if(items.item[i].selected==true){
             $($(".select_item")[i%10]).prop("checked",true);
         }
@@ -107,18 +177,27 @@ function selectBox(obj){
 
 $(function () {
     target_page=1;     //初始时第一页
-    $.post("result_data",function (data, status) {
+    $.post("result_data?field=" + GetQueryString("field") + "&name=" + GetQueryString("name"), function (data, status) {
         items=data;
         item_num=data["item"].length;
         $("#pagen a").text(data["item"].length %10==0 ? data["item"].length/10 : Math.ceil(data["item"].length/10));
         var i;
-        for(i=0; i<10;i++){
-            $("#result_table").append($('<tr>' +
-                '                           <td class="order">'+(i+1)+'</td>'+
-                '                           <td class="entity">'+data["item"][i]["entity"]+'</td>'+
-                '                           <td class="point">'+data["item"][i]["point"]+'</td>'+
-                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>'+
-                '                       </tr>'));
+        for(i=0; i<10 && i<item_num;i++){
+            if (items["item"][i]["isnew"]) {          //高亮显示
+                $("#result_table").append($('<tr>' +
+                    '                           <td class="order" style="color: #1e87f0">' + (i + 1) + '</td>' +
+                    '                           <td class="entity" style="color: #1e87f0">' + items["item"][i]["entity"] + '</td>' +
+                    '                           <td class="point" style="color: #1e87f0">' + items["item"][i]["point"] + '</td>' +
+                    '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
+                    '                       </tr>'));
+            } else {
+                $("#result_table").append($('<tr>' +
+                    '                           <td class="order">' + (i + 1) + '</td>' +
+                    '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
+                    '                           <td class="point">' + items["item"][i]["point"] + '</td>' +
+                    '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
+                    '                       </tr>'));
+            }
         }
         regulatePage(1);
     });
@@ -263,13 +342,13 @@ $(function () {
         if($(this).prop("checked")==true){            //选中
             $("input[name='select_page']").prop("checked",false);
             var i;
-            for(i=0;i<items.item.length;i++){
+            for(i=0;i<item_num;i++){
                 items.item[i].selected=true;
             }
         }
         else{
             var i;
-            for(i=0;i<items.item.length;i++){
+            for(i=0;i<item_num;i++){
                 items.item[i].selected=false;
             }
         }

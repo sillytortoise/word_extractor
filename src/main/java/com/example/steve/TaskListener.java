@@ -2,7 +2,9 @@ package com.example.steve;
 /*监听任务池是否为空，并为每个用户创建任务执行线程*/
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 
 public class TaskListener implements Runnable {
     public TaskListener() {
@@ -10,11 +12,15 @@ public class TaskListener implements Runnable {
 
     public void run() {
         while (true) {
-            for (HashMap.Entry<String, List<String>> e : SteveApplication.taskPool.entrySet()) {
-                if (!SteveApplication.threadPool.contains(e.getKey())) {
-                    Thread t = new Thread(new TaskProcessor(e.getKey(), e.getValue()));
-                    t.start();
-                    SteveApplication.threadPool.add(e.getKey());
+            Iterator<HashMap.Entry<String, List<String>>> it = SteveApplication.taskPool.entrySet().iterator();
+            synchronized (SteveApplication.taskPool){
+                while (it.hasNext()) {
+                    HashMap.Entry<String, List<String>> next = it.next();
+                    if (!SteveApplication.threadPool.contains(next.getKey())) {
+                        Thread t = new Thread(new TaskProcessor(next.getKey(), next.getValue()));
+                        t.start();
+                        SteveApplication.threadPool.add(next.getKey());
+                    }
                 }
             }
 

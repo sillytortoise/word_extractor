@@ -6,11 +6,6 @@ function GetQueryString(name) {
     return null;
 }
 
-function  form_submit() {
-    $("form").submit(function (e) {
-        getCorpus();
-    })
-}
 
 function getCorpus(){
     $("#corpus_table td").each(function () {

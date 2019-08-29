@@ -20,11 +20,16 @@ import java.util.List;
 @Controller
 @SpringBootApplication
 public class SteveApplication {
-    public static final String rootdir = "/home/amax/IdeaProjects/corpus";
+    public static final String rootdir = "/datamore/cc/corpus";
     public static final String extractdir = "/datamore/cc/entity_extraction/entity_extraction";
+    public static final String baikedir="/datamore/cc/entity_extraction/baike_extraction/";
+    public static final String entitydir="/datamore/cc/entity_extraction/entity_classification/";
     public static HashMap<String, List<String>> taskPool = null;      //待执行的任务的集合 用户名 任务列表
-    public static List<String> fields = null;                //正在执行的任务 用户名
-    public static HashSet<String> threadPool = null;
+    public static List<String> fields = null;
+    public static List<String> fields_baike = null;
+    public static List<String> fields_entity = null;
+
+    public static List<String> threadPool = null;
 
 
     public static void main(String[] args) {
@@ -34,8 +39,10 @@ public class SteveApplication {
     @PostConstruct
     public void Init() {
         taskPool = new HashMap<>();
+        threadPool = new ArrayList<>();
         fields = new ArrayList<>();
-        threadPool = new HashSet<>();
+        fields_baike=new ArrayList<>();
+        fields_entity=new ArrayList<>();
         Connection conn = DBConnection.getConn();
         String s_user = "select uid from `user`";
         try {
@@ -44,12 +51,12 @@ public class SteveApplication {
             while (rs.next()) {
                 String uid = rs.getString("uid");
                 List<String> user_tasks = new ArrayList<>();
-                String s_task = "select * from `" + uid + "_task` where statu='正在处理' or statu='未完成' order by `task_time`";
+                String s_task = "select * from `" + uid + "_task` where statu='待处理' order by `task_time`";
                 Statement s = conn.createStatement();
                 ResultSet r_task = s.executeQuery(s_task);
-                while (r_task.next()) {
-                    user_tasks.add(r_task.getString("domain") + ":" + r_task.getString("task_name"));
-                }
+//                while (r_task.next()) {
+//                    user_tasks.add(r_task.getString("domain") + ":" + r_task.getString("task_name"));
+//                }
                 s.close();
                 if (user_tasks.size() > 0)
                     taskPool.put(uid, user_tasks);

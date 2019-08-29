@@ -8,39 +8,7 @@
     <script src="/js/jquery-3.4.1.min.js" type="text/javascript"></script>
     <script src="/js/uikit.js" type="text/javascript"></script>
     <script src="/js/Logout.js" type="text/javascript"></script>
-    <script type="text/javascript">
-        function GetQueryString(name) {
-            var reg = new RegExp("(^|&)"+ name +"=([^&]*)(&|$)");
-            var r = window.location.search.substr(1).match(reg);
-            if(r!=null)
-                return  decodeURI(r[2]);
-            return null;
-        }
-        function getCorpus(){
-            $("#corpus_table td").each(function () {
-               $(this).remove();
-            });
-            $.get('row_corpus?field='+GetQueryString("field"),function (data, status) {
-                var i;
-                for(i in data["corpus"]){
-                    $("#corpus_table").append($('<tr>\n' +
-                        '                           <td>'+data["corpus"][i]["fname"]+'</td>\n' +
-                        '                           <td>'+data["corpus"][i]["fsize"]+'</td>\n' +
-                        '                           <td>'+data["corpus"][i]["time"]+'</td>\n' +
-                        '                       </tr>'));
-                }
-            });
-        }
-        $(function () {
-            getCorpus();
-            $("#login").click(function(){
-                $(location).attr("href","login.html");
-            });
-            $("#register").click(function(){
-                $(location).attr("href","login.html");
-            });
-        });
-    </script>
+    <script src="/js/corpus.js" type="text/javascript"></script>
 </head>
 <body>
 <div class="uk-card uk-card-default uk-card-large uk-card-body" style="padding: 0">
@@ -82,10 +50,11 @@
         <div id="upload">
             <a id="btnSelect" class="uk-a">选择语料</a>
             <input id="uploadFile" type="file" name="corpus" multiple="multiple"/>
-            <input type="submit" value="上传"/>
+            <input type="submit" class="uk-button" value="上传"></input>
+
         </div>
     </form>
-    <div>
+    <div style="text-align: center">
         <table class="uk-table-striped" border="1" id="corpus_table">
             <tr>
                 <th>文件名</th>
