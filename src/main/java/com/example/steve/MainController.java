@@ -66,7 +66,13 @@ public class MainController {
             else{
                 json.put("isextracted", false);
             }
-            json.put("fieldname",field);
+            if(DBConnection.validateTableExist(user+"_"+field+"_concept_lib")) {
+                json.put("isexpanded",true);
+            }
+            else{
+                json.put("isexpanded",false);
+            }
+            json.put("fieldname", field);
             list.add(json);
         }
         jsonObject.put("field",list);
@@ -364,7 +370,7 @@ public class MainController {
         JSONObject jsonObject=new JSONObject();
         String user=Login.isLogin(request);
         if(user!=null) {
-            String sql = "select * from " + user + "_task where domain='" + request.getParameter("field") + "'";
+            String sql = "select * from " + user + "_task where domain='" + request.getParameter("field") + "' order by task_time desc";
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(sql);
             List<JSONObject> task_list = new ArrayList<>();
@@ -531,7 +537,8 @@ public class MainController {
             String str;
             // 按行读取字符串
             if (!DBConnection.validateTableExist(user + "_" + request.getParameter("field"))) {        //field entity library doesn't exist
-                while ((str = bf.readLine()) != null) {
+                int count=0;
+                while ((str = bf.readLine()) != null && count<=100000) {
                     String[] s = str.split("\t");
                     JSONObject item = new JSONObject();
                     item.put("point", Double.parseDouble(s[0]));
@@ -539,9 +546,11 @@ public class MainController {
                     item.put("selected", false);
                     item.put("isnew", true);
                     list.add(item);
+                    count++;
                 }
-            } else {                                                              //field entity library exists
-                while ((str = bf.readLine()) != null) {
+            } else {//field entity library exists
+                int count=0;
+                while ((str = bf.readLine()) != null && count<=100000) {
                     String[] s = str.split("\t");
                     JSONObject item = new JSONObject();
                     item.put("point", Double.parseDouble(s[0]));
@@ -555,6 +564,7 @@ public class MainController {
                         item.put("isnew", true);
                     }
                     list.add(item);
+                    count++;
                 }
             }
             bf.close();
@@ -580,16 +590,20 @@ public class MainController {
             Statement st = conn.createStatement();
             st.execute(add_table);
         }
-        String add_lib = "insert into `" + user + "_" + request.getParameter("field") + "` values(?,?)";
+        String add_lib = "insert ignore into `" + user + "_" + request.getParameter("field") + "` values(?,?)";
         PreparedStatement ptmt = conn.prepareStatement(add_lib);
         JSONArray array = result.getJSONArray("item");
         for (int i = 0; i < array.size(); i++) {
             String pointstr = array.getJSONObject(i).getString("point");
             double point = Double.parseDouble(pointstr);
             String entity = array.getJSONObject(i).getString("entity");
-            ptmt.setString(1, entity);
-            ptmt.setDouble(2, point);
-            ptmt.executeUpdate();
+            try {
+                ptmt.setString(1, entity);
+                ptmt.setDouble(2, point);
+                ptmt.executeUpdate();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
         }
         ptmt.close();
         conn.close();
@@ -611,7 +625,7 @@ public class MainController {
         JSONObject jsonObject = new JSONObject();
         List<String> list = new ArrayList<>();
         Connection conn = DBConnection.getConn();
-        String search_lib = "select * from `" + user + "_" + request.getParameter("field") + "`";
+        String search_lib = "select * from `" + user + "_" + request.getParameter("field") + "` order by point desc";
         Statement st = conn.createStatement();
         ResultSet rs = st.executeQuery(search_lib);
         while (rs.next()) {
@@ -662,7 +676,7 @@ public class MainController {
         }
         FileWriter fw=new FileWriter(field_lib);
         Connection conn=DBConnection.getConn();
-        String select_entity="select entity from `"+user+"_"+field+"`";
+        String select_entity="select entity from `"+user+"_"+field+"` order  by point desc";
         Statement st=conn.createStatement();
         ResultSet rs=st.executeQuery(select_entity);
         while(rs.next()){
@@ -673,7 +687,7 @@ public class MainController {
         conn.close();
         response.setHeader("content-type", "application/octet-stream");
         response.setContentType("application/octet-stream");
-        response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode("领域词.txt", "UTF-8"));
+        response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(field+"_领域词.txt", "UTF-8"));
         byte[] buffer=new byte[1024];
         FileInputStream fis=null;
         BufferedInputStream bis=null;
@@ -732,13 +746,13 @@ public class MainController {
         json.put("statu",1);
         String field=request.getParameter("field");
         String task_name=request.getParameter("name");
-        Connection conn=DBConnection.getConn();
-        Statement st=conn.createStatement();
-        ResultSet rs=st.executeQuery("select concept_word from `"+user+"_"+field+"_concept`");
         boolean flag=true;
         if(!DBConnection.validateTableExist(user+"_"+field+"_concept_lib")) {
             flag=false;
         }
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
+        ResultSet rs=st.executeQuery("select concept_word from `"+user+"_"+field+"_concept`");
         while(rs.next()){
             String concept=rs.getString(1);
             json.put(concept,new JSONArray());
@@ -753,6 +767,7 @@ public class MainController {
                 String[] ss=line.split("  ");
                 String entity=ss[0];
                 String point=ss[1];
+                item_json.put("concept",concept);
                 item_json.put("point",point);
                 item_json.put("entity",entity);
                 item_json.put("selected",false);
@@ -760,11 +775,13 @@ public class MainController {
                     item_json.put("isnew", true);
                 }
                 else{
-                    ResultSet r=st.executeQuery("select * from `"+user+"_"+field+"_concept_lib` where concept='"+concept+"' and entity='"+entity+"'");
+                    Statement st1=conn.createStatement();
+                    ResultSet r=st1.executeQuery("select * from `"+user+"_"+field+"_concept_lib` where concept='"+concept+"' and entity='"+entity+"'");
                     if(r.next()){
                         item_json.put("isnew",false);
                     }
                     else item_json.put("isnew",true);
+                    st1.close();
                 }
                 json.getJSONArray(concept).add(item_json);
             }
@@ -786,7 +803,7 @@ public class MainController {
         }
         json.put("statu",1);
         Connection conn = DBConnection.getConn();
-        if (!DBConnection.validateTableExist(user + "_" + request.getParameter("field")+"_concept_lib")) {
+        if (!DBConnection.validateTableExist(user + "_" +field+"_concept_lib")) {
             String add_table = "create table " + user + "_" + request.getParameter("field")+"_concept_lib" + "(" +
                     "concept varchar(20)," +
                     "entity varchar(20)," +
@@ -795,7 +812,7 @@ public class MainController {
             Statement st = conn.createStatement();
             st.execute(add_table);
         }
-        String add_lib = "insert into `" + user + "_" + request.getParameter("field") + "_concept_lib` values(?,?,?)";
+        String add_lib = "insert ignore into `" + user + "_" + request.getParameter("field") + "_concept_lib` values(?,?,?)";
         PreparedStatement ptmt = conn.prepareStatement(add_lib);
         JSONObject result=JSONObject.parseObject(data);
         JSONArray array = result.getJSONArray("item");
@@ -804,13 +821,150 @@ public class MainController {
             String pointstr = array.getJSONObject(i).getString("point");
             double point = Double.parseDouble(pointstr);
             String entity = array.getJSONObject(i).getString("entity");
-            ptmt.setString(1, concept);
-            ptmt.setDouble(2, point);
-            ptmt.setString(3,entity);
-            ptmt.executeUpdate();
+            try {
+                ptmt.setString(1, concept);
+                ptmt.setString(2, entity);
+                ptmt.setDouble(3, point);
+                ptmt.executeUpdate();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
         }
         ptmt.close();
         conn.close();
+        return json;
+    }
+
+    @RequestMapping(value="conceptlib.html",method = RequestMethod.GET)
+    public String conceptlib(HttpServletRequest request,Model model) throws SQLException{
+        String user=Login.isLogin(request);
+        if(user==null){
+            return "login.html";
+        }
+        model.addAttribute("iscookies", new ArrayList<>().add(request.getCookies()[0]));
+        model.addAttribute("user_name",request.getCookies()[0].getName());
+        return "conceptlib.html";
+    }
+
+    @RequestMapping(value = "conceptlib",produces = "application/json;charset=UTF-8",method = RequestMethod.POST)
+    public @ResponseBody JSONObject getConceptLib(HttpServletRequest request) throws SQLException {
+        String user=Login.isLogin(request);
+        JSONObject json=new JSONObject();
+        if(user==null){                     //need login
+            json.put("statu",0);
+            return json;
+        }
+        json.put("statu",1);
+        String field=request.getParameter("field");
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
+        ResultSet rs=st.executeQuery("select distinct `concept` from `"+user+"_"+field+"_concept_lib`");
+        while(rs.next()){
+            String concept=rs.getString(1);
+            json.put(concept,new JSONArray());
+            Statement st1=conn.createStatement();
+            ResultSet concept_items=st1.executeQuery("select entity from `"+user+"_"+field+"_concept_lib` where concept='"+concept+"'");
+            while(concept_items.next()){
+                JSONObject item=new JSONObject();
+                item.put("entity",concept_items.getString("entity"));
+                json.getJSONArray(concept).add(item);
+            }
+            st1.close();
+        }
+        st.close();
+        conn.close();
+        return json;
+    }
+
+    @GetMapping(value = "/download/conceptlib")
+    public void downloadConcept(HttpServletRequest request,HttpServletResponse response) throws SQLException,IOException{
+        String user= Login.isLogin(request);
+        JSONObject json=new JSONObject();
+        if(user==null){
+            json.put("statu",0);
+            //return json;
+        }
+        String field=request.getParameter("field");
+        String concept=request.getParameter("concept");
+        File concept_lib=new File(SteveApplication.rootdir+"/"+user+"/"+field+"/"+concept+"_概念.txt");
+        if(!concept_lib.exists()){
+            concept_lib.createNewFile();
+        }
+        FileWriter fw=new FileWriter(concept_lib);
+        Connection conn=DBConnection.getConn();
+        String select_entity=null;
+        if(concept.equals("全选")){
+            select_entity="select entity from `"+user+"_"+field+"_concept_lib`";
+        }
+        else{
+            select_entity="select entity from `"+user+"_"+field+"_concept_lib` where concept='"+concept+"'";
+        }
+        Statement st=conn.createStatement();
+        ResultSet rs=st.executeQuery(select_entity);
+        while(rs.next()){
+            fw.write(rs.getString(1)+"\n");
+        }
+        fw.close();
+        st.close();
+        conn.close();
+        response.setHeader("content-type", "application/octet-stream");
+        response.setContentType("application/octet-stream");
+        response.setHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(concept_lib.getName(), "UTF-8"));
+        byte[] buffer=new byte[1024];
+        FileInputStream fis=null;
+        BufferedInputStream bis=null;
+        try{
+            fis=new FileInputStream(concept_lib);
+            bis=new BufferedInputStream(fis);
+            OutputStream os=response.getOutputStream();
+            int i=bis.read(buffer);
+            while(i!=-1){
+                os.write(buffer,0,i);
+                i=bis.read(buffer);
+            }
+            json.put("statu",1);
+            //return json;
+        } catch (Exception e){
+            e.printStackTrace();
+        } finally {
+            if (bis != null) {
+                try {
+                    bis.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        json.put("statu",2);
+        //return json;
+    }
+
+    @RequestMapping(value="clear_concept_lib",produces = "application/json;charset=UTF-8",method = RequestMethod.GET)
+    public @ResponseBody JSONObject clear_concept_lib(HttpServletRequest request){
+        Connection conn=DBConnection.getConn();
+        JSONObject json=new JSONObject();
+        try {
+            String user=Login.isLogin(request);
+            String field=request.getParameter("field");
+            Statement st = conn.createStatement();
+            st.execute("SET SQL_SAFE_UPDATES=0");
+            st.execute("DROP TABLE `"+user+"_"+field+"_concept_lib`");
+            st.close();
+            conn.close();
+            json.put("statu",1);
+            return json;
+        } catch(SQLException e){
+            e.printStackTrace();
+            json.put("statu",0);
+            return json;
+        }
     }
 
     public String getFileSize(long size_str){

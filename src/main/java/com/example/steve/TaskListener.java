@@ -21,6 +21,10 @@ public class TaskListener implements Runnable {
                         t.start();
                         SteveApplication.threadPool.add(next.getKey());
                     }
+                    if (next.getValue().isEmpty()) {
+                        SteveApplication.taskPool.remove(next.getKey());
+                        SteveApplication.threadPool.remove(next.getKey());
+                    }
                 }
             }
 

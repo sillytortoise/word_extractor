@@ -42,6 +42,7 @@ function add_items() {
     for (var i = 0; i < item_display.item.length; i++) {
         if (item_display.item[i].isnew == true && item_display.item[i].selected == true) {
             var item = {};
+            item.concept=item_display.item[i].concept;
             item.point = item_display.item[i].point;
             item.entity = item_display.item[i].entity;
             result_items.push(item);
@@ -100,6 +101,7 @@ function clearPage(){
 }
 
 function regulatePage(target_page){
+    $("#pagen a").text(item_num %10==0 ? item_num/10 : Math.ceil(item_num/10));
     if(target_page!=1){
         $("ul[class='uk-tab'] li").each(function () {
             if($(this).attr("id")!="pagen") {
@@ -138,7 +140,11 @@ function regulatePage(target_page){
                     $(this.firstChild).text(1);
                     $(this).attr("class", "uk-active");
                 } else if ($("ul[class='uk-tab'] li").index(this) == 1) {
-                    $(this.firstChild).text(2);
+                    if (2 > parseInt($("#pagen").text())) {
+                        $(this.firstChild).text("");
+                    } else {
+                        $(this.firstChild).text(2);
+                    }
                     $(this).attr("class", "");
                 } else if ($("ul[class='uk-tab'] li").index(this) == 2) {
                     if (3 > parseInt($("#pagen").text())) {
@@ -205,7 +211,6 @@ $(function () {
             }
             item_display.item=allitems;
             item_num = item_display.item.length;
-            $("#pagen a").text(item_num % 10 == 0 ? item_num / 10 : Math.ceil(item_num / 10));
 
             var i;
             for (i = 0; i < 10 && i < item_num; i++) {
@@ -383,7 +388,7 @@ function confirm_cond(){
             var i;
             var num=0;
             for(i in item_display["item"]){
-                if(item_display["item"][i]["point"]<filter_point || num>=100)
+                if(item_display["item"][i]["point"]<filter_point)
                     break;
                 num++;
             }

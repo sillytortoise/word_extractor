@@ -100,6 +100,7 @@ function clearPage(){
 }
 
 function regulatePage(target_page){
+    $("#pagen a").text(item_num %10==0 ? item_num/10 : Math.ceil(item_num/10));
     if(target_page!=1){
         $("ul[class='uk-tab'] li").each(function () {
             if($(this).attr("id")!="pagen") {
@@ -138,7 +139,11 @@ function regulatePage(target_page){
                     $(this.firstChild).text(1);
                     $(this).attr("class", "uk-active");
                 } else if ($("ul[class='uk-tab'] li").index(this) == 1) {
-                    $(this.firstChild).text(2);
+                    if (2 > parseInt($("#pagen").text())) {
+                        $(this.firstChild).text("");
+                    } else {
+                        $(this.firstChild).text(2);
+                    }
                     $(this).attr("class", "");
                 } else if ($("ul[class='uk-tab'] li").index(this) == 2) {
                     if (3 > parseInt($("#pagen").text())) {
@@ -180,7 +185,6 @@ $(function () {
     $.post("result_data?field=" + GetQueryString("field") + "&name=" + GetQueryString("name"), function (data, status) {
         items=data;
         item_num=data["item"].length;
-        $("#pagen a").text(data["item"].length %10==0 ? data["item"].length/10 : Math.ceil(data["item"].length/10));
         var i;
         for(i=0; i<10 && i<item_num;i++){
             if (items["item"][i]["isnew"]) {          //高亮显示
@@ -232,6 +236,58 @@ $(function () {
                 regulatePage(parseInt($("#goto").val()));
             }
         });
+    });
+
+    $("select").change(function(){
+        if(("select").val()==2){
+            items["item"].sort(function (a, b) {
+                var i;
+                for(i=0;i<a["entity"].length;i++){
+                    if(i>=b["entity"].length) {
+                        return 1;
+                    }
+                    else if(a["entity"][i]==b["entity"][i])
+                        continue;
+                    else{
+                        return a["entity"][i].localeCompare(b["entity"][i],'zh-CN');
+                    }
+                }
+                if(a["entity"].length==b["entity"].length){
+                    return 0;
+                }
+                else{
+                    return -1;
+                }
+            });
+            target_page=1;
+            clearPage();
+            getPage(1);
+            regulatePage(1);
+        } else if($("select").val()==3) {   //按分数由大到小排序
+            items["item"].sort(function (a, b) {
+                return b["point"] - a["point"];
+            });
+
+            if ($("#filter").val() != "" && $("#filter").val() >= 0 && $("#filter").val() <= 1) {     //如果满足过滤条件，显示过滤结果
+                var filter_point = $("#filter").val();
+
+                var i;
+                var num = 0;
+                for (i in items["item"]) {
+                    if (items["item"][i]["point"] < filter_point)
+                        break;
+                    num++;
+                }
+
+                item_num = num;
+                $("#pagen a").text(item_num % 10 == 0 ? item_num / 10 : Math.ceil(item_num / 10));
+                target_page = 1;
+                clearPage();
+                getPage(1);
+                regulatePage(1);
+            }
+        }
+
     });
 
     $("#confirm").click(function () {
@@ -294,7 +350,7 @@ $(function () {
                 var i;
                 var num=0;
                 for(i in items["item"]){
-                    if(items["item"][i]["point"]<filter_point || num>=100)
+                    if(items["item"][i]["point"]<filter_point)
                         break;
                     num++;
                 }
