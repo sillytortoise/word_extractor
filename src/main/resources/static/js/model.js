@@ -68,12 +68,14 @@ function add_seed(obj){
         '                    </div>'));
 }
 
+
 function fill_form(field){
     $.get("modify?field=" + field, function (data, statu) {
         var i,j,k;
         $("input[name='field_name_input']").val(data["field"]);
         for(i in data["field_seed"]) {
-            $("#field_seed").append($('<li id="field_seed_li' + (i-0+1).toString() + '"><input type="text" name="field_seed_input' + (i-0+1).toString() + '" value="'+data["field_seed"][i]+'"/><button type="button" onclick="del(this)" id="delete_seed' + (i-0+1).toString() + '">删除</button></li>'));
+            if(data["field_seed"][i]!="")
+                $("#field_seed").append($('<li id="field_seed_li' + (i-0+1).toString() + '"><input type="text" name="field_seed_input' + (i-0+1).toString() + '" value="'+data["field_seed"][i]+'"/><button type="button" onclick="del(this)" id="delete_seed' + (i-0+1).toString() + '">删除</button></li>'));
         }
         for(j in data["concepts"]){
             $("#concept_container").append($('<div id="add_concept'+(j-0+1).toString()+'">\n' +

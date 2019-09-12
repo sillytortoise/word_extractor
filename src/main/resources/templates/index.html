@@ -28,15 +28,22 @@
                         concept_lib_path="conceptlib.html?field="+data.field[i].fieldname;
                     }
                     else concept_lib_path="#";
-                    $("#field_list").append($('<ul class="field_table">\n' +
-                        '                          <li class="item">'+data.field[i].fieldname+'</li>\n' +
-                        '                          <li class="item"><a href="model.html?field='+data.field[i].fieldname+'">领域信息管理</a></li>\n' +
-                        '                          <li class="item"><a href="corpus.html?field='+data.field[i].fieldname+'">语料管理</a></li>\n' +
-                        '                          <li class="item"><a href="task.html?field='+data.field[i].fieldname+'">任务管理</a></li>\n' +
-                        '                          <li class="item"><a href="'+field_lib_path+'">领域词库管理</a></li>\n' +
-                        '                          <li class="item"><a href="'+concept_lib_path+'">概念词库管理</a></li>\n' +
-                        '                      </ul>'));
-
+                    // $("#field_list").append($('<ul class="field_table">\n' +
+                    //     '                          <li class="item">'+data.field[i].fieldname+'</li>\n' +
+                    //     '                          <li class="item"><a href="model.html?field='+data.field[i].fieldname+'">领域信息管理</a></li>\n' +
+                    //     '                          <li class="item"><a href="corpus.html?field='+data.field[i].fieldname+'">语料管理</a></li>\n' +
+                    //     '                          <li class="item"><a href="task.html?field='+data.field[i].fieldname+'">任务管理</a></li>\n' +
+                    //     '                          <li class="item"><a href="'+field_lib_path+'">领域词库管理</a></li>\n' +
+                    //     '                          <li class="item"><a href="'+concept_lib_path+'">概念词库管理</a></li>\n' +
+                    //     '                      </ul>'));
+                    $("#field_list").append($('<tr>\n' +
+                        '                          <td>'+data.field[i].fieldname+'</td>\n' +
+                        '                          <td><a href="model.html?field='+data.field[i].fieldname+'">领域信息管理</a></td>\n' +
+                        '                          <td><a href="corpus.html?field='+data.field[i].fieldname+'">语料管理</a></td>\n' +
+                        '                          <td><a href="task.html?field='+data.field[i].fieldname+'">任务管理</a></td>\n' +
+                        '                          <td><a href="'+field_lib_path+'">领域词库管理</a></td>\n' +
+                        '                          <td><a href="'+concept_lib_path+'">概念词库管理</a></td>\n' +
+                        '                      </tr>'));
                 }
             });
             $("#login").click(function () {
@@ -79,8 +86,16 @@
 </nav>
     <section id="main">
         <div class="create-field"><button id="create" class="uk-button-primary">构建领域</button></div>   
-        <div id="field_list">
-        </div>
+        <table id="field_list" border="1" class="uk-table-striped">
+            <tr>
+                <th>领域</th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </table>
     </section>
 </body>
 </html>

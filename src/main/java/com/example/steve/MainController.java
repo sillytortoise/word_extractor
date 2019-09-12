@@ -107,7 +107,7 @@ public class MainController {
         ResultSet rs1=stmt1.executeQuery(sql1);
         if(rs1.next()){
             json.put("field",field);
-            String[] seeds= rs1.getString("seed").split(" ");
+            String[] seeds= rs1.getString("seed").trim().split(" ");
             json.put("field_seed",seeds);
         }
         stmt1.close();
@@ -217,76 +217,59 @@ public class MainController {
                 }
             }
             seed_list = seed_list.trim();
-            String s2 = "update `field` set `domain`=?,`seed`=? where `uid`=? and `domain`=?";
+            String s2 = "update `field` set `seed`=? where `uid`=? and `domain`=?";
             PreparedStatement p2 = conn.prepareStatement(s2);
-            p2.setString(1, new_field_name);
-            p2.setString(2, seed_list);
-            p2.setString(3, user_id);
-            p2.setString(4, field_name);
+            p2.setString(1, seed_list);
+            p2.setString(2, user_id);
+            p2.setString(3, field_name);
             int r1 = p2.executeUpdate();
             if (r1 == 0) {
-                out.print("<script>alert('构建失败！');</script>");
+                out.print("<script>alert('修改失败！');</script>");
                 return;
             }
-            if (!field_name.equals(new_field_name)) {        //领域名发生变化
-                try {
-                    //修改概念表名、语料表名
-                    conn.setAutoCommit(false);
-                    String s3 = "rename table `" + user_id + "_" + field_name + "_concept` to `" + user_id + "_" + new_field_name + "_concept`";
-                    Statement stmt1 = conn.createStatement();
-                    stmt1.execute(s3);
-                    String s4 = "rename table `" + user_id + "_" + field_name + "_corpus` to `" + user_id + "_" + new_field_name + "_corpus";
-                    stmt1.execute(s4);
-                    conn.commit();
-                    out.print("\"<script>alert('修改成功！');</script>\"");
-                } catch (Exception se) {
-                    conn.rollback();
-                    out.print("\"<script>alert('修改失败！');</script>\"");
-                }
-            } else {
-                int count2 = 1;
-                int count_concept = 0;
-                String table_name = user_id + "_" + new_field_name + "_concept";
-                String stop_safe = "SET SQL_SAFE_UPDATES = 0";
-                String del = "delete from " + table_name;
-                try {
-                    //Assume a valid connection object conn
-                    conn.setAutoCommit(false);
-                    Statement stmt = conn.createStatement();
-                    stmt.execute(stop_safe);
-                    stmt.executeUpdate(del);
-                    for (; count2 <= 100; count2++) {
-                        if (request.getParameter("concept_name_input" + count2) != null) {
-                            count_concept++;
-                            String concept = request.getParameter("concept_name_input" + count2);
-                            String concept_seed_list = "";
-                            int count3 = 1;
-                            for (; count3 <= 100; count3++) {
-                                if (request.getParameter("concept" + count2 + "_seed" + count3) != null) {
-                                    concept_seed_list += " " + request.getParameter("concept" + count2 + "_seed" + count3);
-                                }
-                            }
-                            concept_seed_list = concept_seed_list.trim();
-                            String insert_concept = "insert into " + table_name + " values(?,?)";
-                            PreparedStatement p3 = conn.prepareStatement(insert_concept);
-                            p3.setString(1, concept);
-                            p3.setString(2, concept_seed_list);
-                            int result = p3.executeUpdate();
-                            if (result == 0) {
-                                out.print("<script>alert('概念" + count_concept + "构建失败！');</script>");
+            int count2 = 1;
+            int count_concept = 0;
+            String table_name = user_id + "_" + field_name + "_concept";
+            String stop_safe = "SET SQL_SAFE_UPDATES = 0";
+            String del = "delete from " + table_name;
+            try {
+                //Assume a valid connection object conn
+                conn.setAutoCommit(false);
+                Statement stmt = conn.createStatement();
+                stmt.execute(stop_safe);
+                stmt.executeUpdate(del);
+                for (; count2 <= 100; count2++) {
+                    if (request.getParameter("concept_name_input" + count2) != null) {
+                        count_concept++;
+                        String concept = request.getParameter("concept_name_input" + count2);
+                        String concept_seed_list = "";
+                        int count3 = 1;
+                        for (; count3 <= 100; count3++) {
+                            if (request.getParameter("concept" + count2 + "_seed" + count3) != null) {
+                                concept_seed_list += " " + request.getParameter("concept" + count2 + "_seed" + count3);
                             }
                         }
+                        concept_seed_list = concept_seed_list.trim();
+                        String insert_concept = "insert into " + table_name + " values(?,?)";
+                        PreparedStatement p3 = conn.prepareStatement(insert_concept);
+                        p3.setString(1, concept);
+                        p3.setString(2, concept_seed_list);
+                        int result = p3.executeUpdate();
+                        if (result == 0) {
+                            out.print("<script>alert('概念" + count_concept + "构建失败！');</script>");
+                        }
                     }
-
-                    conn.commit();
-                } catch (SQLException se) {
-                    out.print("<script>alert('概念" + count_concept + "构建失败！');</script>");
-                    conn.rollback();
                 }
 
-                conn.close();
-                out.print("<script>alert('修改成功！');</script>");
+                conn.commit();
+            } catch (SQLException se) {
+                se.printStackTrace();
+                out.print("<script>alert('概念" + count_concept + "构建失败！');</script>");
+                conn.rollback();
             }
+
+            conn.close();
+            out.print("<script>alert('修改成功！');</script>");
         }
     }
 
@@ -625,7 +608,7 @@ public class MainController {
         JSONObject jsonObject = new JSONObject();
         List<String> list = new ArrayList<>();
         Connection conn = DBConnection.getConn();
-        String search_lib = "select * from `" + user + "_" + request.getParameter("field") + "` order by point desc";
+        String search_lib = "select * from `" + user + "_" + request.getParameter("field") + "`";
         Statement st = conn.createStatement();
         ResultSet rs = st.executeQuery(search_lib);
         while (rs.next()) {

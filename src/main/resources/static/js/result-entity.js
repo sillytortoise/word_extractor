@@ -31,10 +31,12 @@ function show_new() {
 
 function show_all(){
     item_num=item_display.item.length;
+    item_display.item.sort(function(a,b){
+        return b.point-a.point;
+    });
     clearPage();
     getPage(1);
     regulatePage(1);
-    $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
 }
 
 function add_items() {

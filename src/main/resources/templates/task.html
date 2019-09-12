@@ -88,6 +88,10 @@
             else{
                 task_type=3;
             }
+            if(task_type==1 && str==''){
+                alert("创建失败，未选择任何语料！");
+                return;
+            }
             $.ajax(
                 {
                     url:"task.html?field="+field_name,//发送的路径

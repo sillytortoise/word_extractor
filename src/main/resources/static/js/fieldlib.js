@@ -121,6 +121,25 @@ $(function () {
     $.post("fieldlib?field=" + GetQueryString("field"), function (data, status) {
         items = data;
         item_num = data["item"].length;
+        items["item"].sort(function (a, b) {
+            var i;
+            for(i=0;i<a.length;i++){
+                if(i>=b.length) {
+                    return 1;
+                }
+                else if(a[i]==b[i])
+                    continue;
+                else{
+                    return a[i].localeCompare(b[i],'zh-CN');
+                }
+            }
+            if(a.length==b.length){
+                return 0;
+            }
+            else{
+                return -1;
+            }
+        });
         var i;
         for (i = 0; i < 10 && i<item_num; i++) {
             $("#result_table").append($('<tr>' +

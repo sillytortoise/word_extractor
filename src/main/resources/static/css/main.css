@@ -74,13 +74,22 @@ section{
     font-size: 18pt;
 }
 #field_list{
-    display: inline-block;
     position: relative;
+    margin-top: 0;
     left:10%;
     width:80%;
     height:auto;
-    background-color: #e6e6fa;
 }
+
+#field_list a{
+    color: #444444;
+}
+
+#field_list th,td{
+    position: relative;
+    width:16.7%;
+}
+
 .field_table{
     position:relative;
     left:5%;
@@ -177,10 +186,10 @@ section{
 table
 {
     position: relative;
-    left: 20%;
+    left: 10%;
     margin-top: 50px;
     font-family:"Trebuchet MS", Arial, Helvetica, sans-serif;
-    width:60%;
+    width:80%;
     border-collapse:collapse;
 }
 
@@ -196,12 +205,19 @@ tr{
     padding:3px 7px 2px 7px;
 }
 
-#task_table td, th{
+#task_table{
+    position: relative;
+    margin-top: 50px;
+    left: 10%;
+    width: 80%;
+}
+
+
+#task_table th,td{
     font-size:1em;
     position: relative;
-    width: 16%;
+    width: 5%;
     border:1px solid #98bf21;
-    padding:3px 7px 2px 7px;
 }
 
 #select_corpus td,th{

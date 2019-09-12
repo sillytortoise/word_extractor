@@ -18,12 +18,12 @@ public class TaskProcessor implements Runnable {
     }
 
     public void run() {
-        Connection conn = DBConnection.getConn();
-        try {
-            while (list.size()>0) {
-                String task_name = list.get(0);
-                String field = task_name.substring(0, task_name.indexOf(':'));
-                String fix_statu = "update `" + user + "_task` set statu='正在处理' where task_name='" + task_name.substring(task_name.indexOf(':') + 1) + "' and domain='" + field + "'";
+        while (list.size()>0) {
+            String task_name = list.get(0);
+            String field = task_name.substring(0, task_name.indexOf(':'));
+            String fix_statu = "update `" + user + "_task` set statu='正在处理' where task_name='" + task_name.substring(task_name.indexOf(':') + 1) + "' and domain='" + field + "'";
+            try {
+                Connection conn = DBConnection.getConn();
                 Statement stmt = conn.createStatement();
                 stmt.executeUpdate(fix_statu);
 
@@ -83,6 +83,8 @@ public class TaskProcessor implements Runnable {
                             }
                         }
                     }
+                    stmt.close();
+                    conn.close();
                     Runtime.getRuntime().exec("rm -f " + SteveApplication.rootdir + "/" + user + "/" + field + "/processed.txt").waitFor();    //删除原有的文件
                     File[] txts = new File(SteveApplication.rootdir + "/" + user + "/" + field).listFiles();
                     List<File> txt_list = new ArrayList<>();
@@ -108,6 +110,9 @@ public class TaskProcessor implements Runnable {
                         }
                     }
 
+                    rs.close();
+                    stmt.close();
+                    conn.close();
                     //检测正在执行的任务中有无与此任务同领域的
                     while (SteveApplication.fields.contains(field)) {
                         Thread.sleep(1000);
@@ -176,7 +181,10 @@ public class TaskProcessor implements Runnable {
                         }
                     }
                     fw.close();
+                    rs.close();
                     st.close();
+                    stmt.close();
+                    conn.close();
 
                     while (SteveApplication.fields_baike.contains(field)) {
                         Thread.sleep(1000);
@@ -184,17 +192,17 @@ public class TaskProcessor implements Runnable {
                     SteveApplication.fields_baike.add(field);
                     Runtime.getRuntime().exec("sh /datamore/cc/knowledge/baike.sh " +
                             SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/ " +
-                            SteveApplication.baikedir + " " + field).waitFor();
-                    FileInputStream fin=new FileInputStream(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result_temp.txt");
-                    InputStreamReader isr=new InputStreamReader(fin);
-                    BufferedReader br=new BufferedReader(isr);
-                    File result=new File(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result.txt");
+                            SteveApplication.baikedir + " " + field + " &>" + SteveApplication.baikedir + "test.log").waitFor();
+                    FileInputStream fin = new FileInputStream(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result_temp.txt");
+                    InputStreamReader isr = new InputStreamReader(fin);
+                    BufferedReader br = new BufferedReader(isr);
+                    File result = new File(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result.txt");
                     result.createNewFile();
-                    FileWriter fw_baike=new FileWriter(result);
-                    String line=null;
-                    while((line=br.readLine())!=null){
-                        String[] ss=line.split("  ");
-                        String each_line=ss[1]+"\t"+ss[0]+"\n";
+                    FileWriter fw_baike = new FileWriter(result);
+                    String line = null;
+                    while ((line = br.readLine()) != null) {
+                        String[] ss = line.split("  ");
+                        String each_line = ss[1] + "\t" + ss[0] + "\n";
                         fw_baike.write(each_line);
                     }
                     fin.close();
@@ -203,47 +211,78 @@ public class TaskProcessor implements Runnable {
                     fw_baike.close();
                     SteveApplication.fields_baike.remove(field);
                 } else {                       //实体扩充
-                    String select_entity_set="select entity from `"+user+"_"+field+"`";
-                    ResultSet rs=stmt.executeQuery(select_entity_set);
-                    String folder_path=SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1)+"/";
-                    File entity_set=new File(folder_path+field+"_entity_set.txt");
+                    String select_entity_set = "select entity from `" + user + "_" + field + "`";
+                    ResultSet rs = stmt.executeQuery(select_entity_set);
+                    String folder_path = SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/";
+                    File entity_set = new File(folder_path + field + "_entity_set.txt");
                     entity_set.createNewFile();
-                    FileWriter fw_set=new FileWriter(entity_set);
-                    while(rs.next()){
-                        fw_set.write(rs.getString(1)+"\n");
+                    FileWriter fw_set = new FileWriter(entity_set);
+                    while (rs.next()) {
+                        fw_set.write(rs.getString(1) + "\n");
                     }
                     fw_set.close();
-                    JSONObject json=new JSONObject();
-                    rs=stmt.executeQuery("select * from `"+user+"_"+field+"_concept`");
-                    while(rs.next()){
-                        String seeds=rs.getString(2).trim();
-                        String[] seed_set=seeds.split(" ");
-                        json.put(rs.getString(1),seed_set);
+                    JSONObject json = new JSONObject();
+                    rs = stmt.executeQuery("select * from `" + user + "_" + field + "_concept`");
+                    while (rs.next()) {
+                        String seeds = rs.getString(2).trim();
+                        String[] seed_set = seeds.split(" ");
+                        json.put(rs.getString(1), seed_set);
                     }
-                    File jsonfile=new File(folder_path+field+"_seed_concept_entity.json");
+                    File jsonfile = new File(folder_path + field + "_seed_concept_entity.json");
                     jsonfile.createNewFile();
-                    FileWriter fw_json=new FileWriter(jsonfile);
+                    FileWriter fw_json = new FileWriter(jsonfile);
                     fw_json.write(json.toJSONString());
                     fw_json.close();
+                    rs.close();
+
+                    ResultSet rs1=stmt.executeQuery("select * from `"+user+"_task` where task_name like '领域词抽取%' and statu='已完成'");
+                    if(rs1.next()){
+                        Runtime.getRuntime().exec("cp "+SteveApplication.rootdir+"/"+user+"/"+field+"/processed.txt "+SteveApplication.entitydir+field+"_corpus_user_raw.txt").waitFor();
+                    }
+                    rs1.close();
+                    stmt.close();
+                    conn.close();
                     while (SteveApplication.fields_entity.contains(field)) {
                         Thread.sleep(1000);
                     }
                     SteveApplication.fields_entity.add(field);
-                    Runtime.getRuntime().exec("sh /datamore/cc/knowledge/entity.sh "+folder_path+" "+SteveApplication.entitydir+" "+field).waitFor();
+                    Runtime.getRuntime().exec("sh /datamore/cc/knowledge/entity.sh " + folder_path + " " + SteveApplication.entitydir + " " + field).waitFor();
                     SteveApplication.fields_entity.remove(field);
                 }
 
-                String update_statu = "update `" + user + "_task` set statu='已完成'," +
+                Connection connection=DBConnection.getConn();
+                Statement statement=connection.createStatement();
+                String error_statu = "update `" + user + "_task` set statu='任务失败' where task_name='" + task_name.substring(task_name.indexOf(':') + 1) + "' and domain='" + field + "'";
+                String finish_statu = "update `" + user + "_task` set statu='已完成'," +
                         "result='" + SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result.txt', " +
                         "finish_time='" + MainController.getTime() + "' where task_name='" + task_name.substring(task_name.indexOf(':') + 1) + "' and domain='" + field + "'";
-                stmt.executeUpdate(update_statu);
-                stmt.close();
+                if(task_name.charAt(task_name.indexOf(':') + 1) == '领' || task_name.charAt(task_name.indexOf(':') + 1) == '基') {
+                    if (new File(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result.txt").exists()) {
+                        statement.executeUpdate(finish_statu);
+                    } else statement.executeUpdate(error_statu);
+                }
+                else{
+                    statement.executeUpdate(finish_statu);
+                }
+                statement.close();
                 list.remove(0);
+                connection.close();
                 Thread.sleep(1000);
+            } catch(Exception e){
+                e.printStackTrace();
+                String error_statu = "update `" + user + "_task` set statu='任务失败' where task_name='" + task_name.substring(task_name.indexOf(':') + 1) + "' and domain='" + field + "'";
+                Connection conn1=DBConnection.getConn();
+                try{
+                    Statement st=conn1.createStatement();
+                    st.executeUpdate(error_statu);
+                    st.close();
+                    list.remove(0);
+                    conn1.close();
+                    Thread.sleep(1000);
+                } catch(Exception err){
+                    err.printStackTrace();
+                }
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 }

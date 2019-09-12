@@ -35,7 +35,7 @@ function getPage(page){
 }
 
 function clear_lib(){
-    if(window.confirm('确定要清空领域词库?')){
+    if(window.confirm('确定要清空概念词库?')){
         $.get("clear_concept_lib?field="+GetQueryString("field"),function (data) {
             if(data.statu==0)
                 alert('清空失败!');
@@ -155,6 +155,27 @@ $(function () {
                     }
                 }
             }
+
+            allitems.sort(function (a, b) {
+                var i;
+                for(i=0;i<a["entity"].length;i++){
+                    if(i>=b["entity"].length) {
+                        return 1;
+                    }
+                    else if(a["entity"][i]==b["entity"][i])
+                        continue;
+                    else{
+                        return a["entity"][i].localeCompare(b["entity"][i],'zh-CN');
+                    }
+                }
+                if(a["entity"].length==b["entity"].length){
+                    return 0;
+                }
+                else{
+                    return -1;
+                }
+            });
+
             item_display.item=allitems;
             item_num = item_display.item.length;
 
@@ -228,6 +249,25 @@ $(function () {
         else{
             item_display.item=items[$("#select_concept").find("option:selected").text()];
         }
+        item_display.item.sort(function (a, b) {
+            var i;
+            for(i=0;i<a["entity"].length;i++){
+                if(i>=b["entity"].length) {
+                    return 1;
+                }
+                else if(a["entity"][i]==b["entity"][i])
+                    continue;
+                else{
+                    return a["entity"][i].localeCompare(b["entity"][i],'zh-CN');
+                }
+            }
+            if(a["entity"].length==b["entity"].length){
+                return 0;
+            }
+            else{
+                return -1;
+            }
+        });
         item_num=item_display.item.length;
         clearPage();
         getPage(1);

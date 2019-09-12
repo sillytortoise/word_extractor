@@ -30,10 +30,14 @@ function show_new() {
 
 function show_all(){
     item_num=items.item.length;
+    $("#sel").val(2);
+    items["item"].sort(function (a, b) {
+        return b["point"] - a["point"];
+    });
+    target_page=1;
     clearPage();
     getPage(1);
     regulatePage(1);
-    $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
 }
 
 function add_items() {
@@ -238,8 +242,8 @@ $(function () {
         });
     });
 
-    $("select").change(function(){
-        if(("select").val()==2){
+    $("#sel").change(function(){
+        if($("#sel").val()==2){
             items["item"].sort(function (a, b) {
                 var i;
                 for(i=0;i<a["entity"].length;i++){
@@ -263,29 +267,15 @@ $(function () {
             clearPage();
             getPage(1);
             regulatePage(1);
-        } else if($("select").val()==3) {   //按分数由大到小排序
+        } else if($("#sel").val()==3) {   //按分数由大到小排序
             items["item"].sort(function (a, b) {
                 return b["point"] - a["point"];
             });
 
-            if ($("#filter").val() != "" && $("#filter").val() >= 0 && $("#filter").val() <= 1) {     //如果满足过滤条件，显示过滤结果
-                var filter_point = $("#filter").val();
-
-                var i;
-                var num = 0;
-                for (i in items["item"]) {
-                    if (items["item"][i]["point"] < filter_point)
-                        break;
-                    num++;
-                }
-
-                item_num = num;
-                $("#pagen a").text(item_num % 10 == 0 ? item_num / 10 : Math.ceil(item_num / 10));
-                target_page = 1;
-                clearPage();
-                getPage(1);
-                regulatePage(1);
-            }
+            target_page = 1;
+            clearPage();
+            getPage(1);
+            regulatePage(1);
         }
 
     });
