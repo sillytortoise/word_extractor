@@ -97,7 +97,7 @@ public class TaskProcessor implements Runnable {
                             if (!fout.exists()) {
                                 fout.createNewFile();
                             }
-                            FileWriter fw = new FileWriter(fout);
+                            FileWriter fw = new FileWriter(fout,true);
                             String line;
                             while ((line = br.readLine()) != null) {
                                 line = line.trim();
@@ -120,15 +120,15 @@ public class TaskProcessor implements Runnable {
 
                     SteveApplication.fields.add(field);         //添加本任务的领域进去
                     Runtime runtime = Runtime.getRuntime();
-                    Process pro = runtime.exec("sh /datamore/cc/knowledge/field.sh " + SteveApplication.rootdir + "/" + user + "/" + field + "/processed.txt " + SteveApplication.extractdir + "/context_" + field + ".txt " + field);
+                    Process pro = runtime.exec("sh /datamore/cc/knowledge/field.sh " + SteveApplication.rootdir + "/" + user + "/" + field + "/ " + SteveApplication.extractdir + "/context_" + field + ".txt " + field +" "+task_name.substring(task_name.indexOf(':')+1));
                     pro.waitFor();
-                    BufferedReader br = new BufferedReader(new InputStreamReader(pro.getInputStream()));
-                    StringBuffer sb = new StringBuffer();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        sb.append(line).append("\n");
-                    }
-                    System.out.println(sb.toString());
+//                    BufferedReader br = new BufferedReader(new InputStreamReader(pro.getInputStream()));
+//                    StringBuffer sb = new StringBuffer();
+//                    String line;
+//                    while ((line = br.readLine()) != null) {
+//                        sb.append(line).append("\n");
+//                    }
+//                    System.out.println(sb.toString());
                     String propagate_result = SteveApplication.extractdir + "/results/Propagate_" + field + ".txt";
                     if (new File(propagate_result).exists()) {
                         String result_file = SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/extraction_result.txt";

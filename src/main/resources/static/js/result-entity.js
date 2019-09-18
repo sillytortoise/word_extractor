@@ -307,6 +307,10 @@ $(function () {
         getPage(target_page);
     });
 
+    $("#filter").focus(function () {
+        this.select();
+    });
+
 });
 
 //confirm click
@@ -338,48 +342,22 @@ function confirm_cond(){
         getPage(1);
         regulatePage(1);
     }
-    else if($("#select_cond").val()==2){   //按字典顺序排序
+    else if($("#select_cond").val()==2){   //按排序
         item_display["item"].sort(function (a, b) {
-            var i;
-            for(i=0;i<a["entity"].length;i++){
-                if(i>=b["entity"].length) {
-                    return 1;
-                }
-                else if(a["entity"][i]==b["entity"][i])
-                    continue;
-                else{
-                    return a["entity"][i].localeCompare(b["entity"][i],'zh-CN');
-                }
-            }
-            if(a["entity"].length==b["entity"].length){
-                return 0;
-            }
-            else{
-                return -1;
-            }
+            return b["point"]-a["point"];
         });
 
         var filter_num=$("#filter").val();
         if(filter_num>=1 && filter_num%1==0){   //如果过滤数为整数，显示filter_num条数据
-            clearPage();
             item_num=filter_num;
-            $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
-            target_page=1;
-            getPage(1);
-            regulatePage(1);
         }
-        else {
-            item_num=item_display["item"].length;
-            $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
-            target_page=1;
-            clearPage();
-            getPage(target_page);
-            regulatePage(target_page);
-        }
-
+        clearPage();
+        target_page=1;
+        getPage(1);
+        regulatePage(1);
     }
     else if($("#select_cond").val()==3){   //按分数由大到小排序
-            item_display["item"].sort(function (a, b) {
+        item_display["item"].sort(function (a, b) {
             return b["point"]-a["point"];
         });
 
@@ -394,22 +372,13 @@ function confirm_cond(){
                     break;
                 num++;
             }
-
             item_num = num;
-            $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
-            target_page = 1;
-            clearPage();
-            getPage(1);
-            regulatePage(1);
         }
-        else{                       //不满足过滤条件，不过滤直接显示排序结果
-            clearPage();
-            item_num=item_display["item"].length;
-            $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
-            target_page=1;
-            getPage(target_page);
-            regulatePage(target_page);
-        }
+        target_page = 1;
+        clearPage();
+        getPage(1);
+        regulatePage(1);
+
     }
 
 }

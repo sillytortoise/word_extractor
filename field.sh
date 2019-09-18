@@ -1,7 +1,9 @@
 #!/bin/sh
+
+. /etc/profile
 cd /datamore/cc/entity_extraction/entity_extraction
-rm $2
-cp $1 $2
+cp $1"processed.txt" $2
 echo "Amax1979!" | sudo -S sh test.sh $3
-cd result/
-rm "AutoPhrase_"*"_"$3
+rm "context_"$3".txt"
+cd results/
+mv "AutoPhrase_"*$3".txt" $1"mission/"$4
