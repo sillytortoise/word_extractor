@@ -3,9 +3,7 @@ package com.example.steve;
 import com.alibaba.fastjson.JSONObject;
 
 import java.io.*;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.*;
 
 public class TaskProcessor implements Runnable {
@@ -34,6 +32,7 @@ public class TaskProcessor implements Runnable {
                 }
 
                 if (task_name.charAt(task_name.indexOf(':') + 1) == '领') {
+
                     String corpus = "select * from `" + user + "_task` where `task_name`='" + task_name.substring(task_name.indexOf(':') + 1) + "'";
                     ResultSet rs = stmt.executeQuery(corpus);
                     rs.next();
@@ -139,22 +138,45 @@ public class TaskProcessor implements Runnable {
                         BufferedReader br_field = new BufferedReader(isr);
                         FileWriter fw_field = new FileWriter(new File(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result.txt"));
                         String line_field;
-                        while ((line_field = br_field.readLine()) != null) {
-                            int separator = line_field.indexOf('[');
-                            String latter_part = line_field.substring(separator + 1, line_field.length() - 1);
-                            String former_part = line_field.substring(0, separator);
-                            String[] ss = latter_part.split(", ");
-                            String latter_part_modified = "";
-                            for (String s : ss) {
-                                latter_part_modified += s;
-                            }
-                            String line_result = former_part + latter_part_modified + "\n";
-                            fw_field.write(line_result);
-                        }
+                        /*统一格式，消除中括号*/
+
+//                        Connection conn1 = DBConnection.getConn();
+//                        conn1.setAutoCommit(false);
+//                        try {
+//                            //建表存储词库抽取结果
+//                            String create_field_table = "create table `" + user + "_" + task_name.replace(":", "_") + "` (entity varchar(20) primary key, point double, selected boolean)";
+//                            Statement st = conn1.createStatement();
+//                            st.execute(create_field_table);
+//                            String insert_entity = "insert ignore into `" + user + "_" + task_name.replace(":", "_") + "` values (?,?,0)";
+//                            //抽取结果入库
+//                            while ((line_field = br_field.readLine()) != null) {
+//                                int separator = line_field.indexOf('[');
+//                                String latter_part = line_field.substring(separator + 1, line_field.length() - 1);
+//                                String former_part = line_field.substring(0, separator);
+//                                String[] ss = latter_part.split(", ");
+//                                String latter_part_modified = "";
+//                                for (String s : ss) {
+//                                    latter_part_modified += s;
+//                                }
+//                                String line_result = former_part + latter_part_modified + "\n";
+//                                fw_field.write(line_result);
+//                                PreparedStatement ptmt = conn1.prepareStatement(insert_entity);
+//                                ptmt.setString(1, latter_part_modified);
+//                                ptmt.setString(2, former_part.trim());
+//                                ptmt.executeUpdate();
+//                                ptmt.close();
+//                            }
+//                            conn1.commit();
+//                        } catch(SQLException e){
+//                            e.printStackTrace();
+//                            conn1.rollback();
+//                        }
+
                         fin.close();
                         isr.close();
                         br_field.close();
                         fw_field.close();
+                        //conn1.close();
                         SteveApplication.fields.remove(field);
                     }
                 } else if (task_name.charAt(task_name.indexOf(':') + 1) == '基') {       //基于百科的抽取

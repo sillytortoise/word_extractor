@@ -27,13 +27,57 @@ function clear_lib(){
     }
 }
 
-function getPage(page) {
-    for (var i = (page - 1) * 10; i < page * 10 && i < items["item"].length && i < item_num; i++) {
-        $("#result_table").append($('<tr>' +
-            '                           <td class="order">' + (i + 1) + '</td>' +
-            '                           <td class="entity">' + items["item"][i] + '</td>' +
-            '                       </tr>'));
+function clear_selected(){
+    if(window.confirm('确定要删除所选词?')){
+        $.ajax({
+            type:"POST",
+            url:"clear_selected?field="+GetQueryString("field"),
+            contentType: "application/json;charset=utf-8",
+            data:JSON.stringify(items),
+            success:function (data) {
+                alert('删除成功!');
+                $(location).attr("href", "fieldlib.html?field=" + GetQueryString("field"));
+            },
+            error:function (data) {
+                alert('删除失败！');
+            }
+        })
     }
+}
+
+function selectBox(obj){
+    var index=$("td[class='select']").index($(obj).parent());
+    if($(obj).prop("checked")){        //选中
+        items.item[(target_page-1)*10+index].selected=true;
+    }
+    else{
+        items.item[(target_page-1)*10+index].selected=false;
+    }
+}
+
+function getPage(page) {
+    var count=0;
+    for (var i = (page - 1) * 10; i < page * 10 && i < items["item"].length && i < item_num; i++) {
+        if(items["item"][i]["selected"]) {
+            $("#result_table").append($('<tr>' +
+                '                           <td class="order">' + (i + 1) + '</td>' +
+                '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
+                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox" checked/></td>' +
+                '                       </tr>'));
+            count++;
+        }
+        else{
+            $("#result_table").append($('<tr>' +
+                '                           <td class="order">' + (i + 1) + '</td>' +
+                '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
+                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
+                '                       </tr>'));
+        }
+    }
+    if(count==10 || (target_page-1)*10+count>=items["item"].length)
+        $("input[name='select_page']").prop("checked",true);
+    else
+        $("input[name='select_page']").prop("checked",false);
 }
 
 function clearPage() {
@@ -123,17 +167,17 @@ $(function () {
         item_num = data["item"].length;
         items["item"].sort(function (a, b) {
             var i;
-            for(i=0;i<a.length;i++){
-                if(i>=b.length) {
+            for(i=0;i<a.entity.length;i++){
+                if(i>=b.entity.length) {
                     return 1;
                 }
-                else if(a[i]==b[i])
+                else if(a.entity[i]==b.entity[i])
                     continue;
                 else{
-                    return a[i].localeCompare(b[i],'zh-CN');
+                    return a.entity[i].localeCompare(b.entity[i],'zh-CN');
                 }
             }
-            if(a.length==b.length){
+            if(a.entity.length==b.entity.length){
                 return 0;
             }
             else{
@@ -141,13 +185,16 @@ $(function () {
             }
         });
         var i;
+
         for (i = 0; i < 10 && i<item_num; i++) {
             $("#result_table").append($('<tr>' +
                 '                           <td class="order">' + (i + 1) + '</td>' +
-                '                           <td class="entity">' + items["item"][i] + '</td>' +
+                '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
+                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>'+
                 '                       </tr>'));
         }
         regulatePage(1);
+        $("input[name='select_page']").prop("checked",false);
     });
 
     //点击切换页面标签
@@ -180,6 +227,24 @@ $(function () {
                     regulatePage(parseInt($("#goto").val()));
                 }
             });
+    });
+
+    $("input[name='select_page']").change(function () {     //本页全选
+        if($(this).prop("checked")==true){            //选中
+            var i;
+            for(i=0;i< 10 && (target_page-1)*10+i<items["item"].length;i++){
+                items.item[(target_page-1)*10+i]["selected"]=true;
+                $($("input[class='select_item']")[i]).prop("checked",true);
+            }
+        }
+        else{
+            var i;
+            for(i=0;i< 10 && (target_page-1)*10+i<items["item"].length;i++){
+                items.item[(target_page-1)*10+i]["selected"]=false;
+                $($("input[class='select_item']")[i]).prop("checked",false);
+            }
+        }
+
     });
 
 });

@@ -42,7 +42,7 @@ public class Login {
         if(rs.next()){
             conn.close();
             Cookie cookie = new Cookie(uid,MD5Utils.MD5Encode(passwd,"utf8"));        //把用户名和密码加入cookie
-            cookie.setMaxAge(3600);  //生命周期3600s
+            cookie.setMaxAge(7*24*60*60);  //生命周期一周
             response.addCookie(cookie); //添加cookie
             return "redirect:index.html";
         }

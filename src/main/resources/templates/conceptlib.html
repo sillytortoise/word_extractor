@@ -43,10 +43,10 @@
     <div id="upload">
         <p class="tips" style="display: inline">概念</p>
         <select id="select_concept" style="font-size: 14pt;font-family: 'Microsoft YaHei'">
-            <option value = "1">全选</option>
         </select>
         <div style="display: inline">
             <button onclick="clear_lib()" class="uk-button-primary" style="display: inline; width:100px; font-size:14pt;font-family: 'Microsoft YaHei';margin-left: 20px">清空</button>
+            <button onclick="clear_selected()" style="margin:0 auto; font-size: 14pt" class="uk-button-primary">批量删除</button>
         </div>
     </div>
     <div style="text-align: center">
@@ -54,14 +54,20 @@
             <tr>
                 <th class="order">序号</th>
                 <th class="entity">实体名称</th>
+                <th class="select">
+                    <p>选择</p>
+                    <div>
+                        <label><input type="checkbox" name="select_page" style="color: #ffffff;visibility: visible"/>本页选择</label><br>
+                    </div>
+                </th>
             </tr>
         </table>
-        <div style="display:inline-block;width: auto;margin: 0 auto; margin-top: 20px">
-            <button class="uk-button-primary" style="width:100px;font-size: 14pt" onclick="download()">下载</button>
-        </div>
     </div>
 </section>
 <div class="bottom">
+    <div style="text-align:center;">
+        <button class="uk-button-primary" style="width: auto;margin: 0 auto;;font-size: 14pt" onclick="download()">下载</button>
+    </div>
     <div class="uk-card-footer" style="margin: 0 auto; width: 1300px">
         <ul class="uk-tab" style="width: auto;margin: 0 auto">
             <li id="page1" class="uk-active"><a>1</a></li>

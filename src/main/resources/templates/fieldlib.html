@@ -41,11 +41,20 @@
 <section id="main">
     <div><h1 class="sub_title">领域词库</h1></div>
     <div style="text-align: center">
-        <button onclick="clear_lib()" style="margin:0 auto; font-size: 14pt" class="uk-button-primary">清空</button>
+        <div>
+            <button onclick="clear_lib()" style="margin:0 auto; font-size: 14pt" class="uk-button-primary">清空</button>
+            <button onclick="clear_selected()" style="margin:0 auto; font-size: 14pt" class="uk-button-primary">批量删除</button>
+        </div>
         <table class="uk-table-striped" border="1" id="result_table">
             <tr>
                 <th class="order">序号</th>
                 <th class="entity">实体名称</th>
+                <th class="select">
+                    <p>选择</p>
+                    <div>
+                        <label><input type="checkbox" name="select_page" style="color: #ffffff;visibility: visible"/>本页选择</label><br>
+                    </div>
+                </th>
             </tr>
         </table>
     </div>

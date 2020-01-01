@@ -47,6 +47,7 @@ function add_items() {
             item.concept=item_display.item[i].concept;
             item.point = item_display.item[i].point;
             item.entity = item_display.item[i].entity;
+            item_display.item[i].isnew=false;
             result_items.push(item);
         }
     }
@@ -59,6 +60,9 @@ function add_items() {
         data: JSON.stringify(result),
         success: function () {
             alert("提交成功!");
+            clearPage();
+            getPage(target_page);
+            regulatePage(target_page);
         },
         error: function (message) {
             console.log(message);
@@ -185,6 +189,7 @@ function selectBox(obj){
 
 $(function () {
     target_page=1;     //初始时第一页
+
     $.post("result-data-entity?field=" + GetQueryString("field") + "&name=" + GetQueryString("name"), function (data, status) {
         if(data.statu!=null && data.statu==0){
             $(location).attr("href","login.html");
@@ -192,27 +197,37 @@ $(function () {
         else {
             items = data;
             var m=0;
-            var count=1;
-            for(;m<Object.keys(items).length;m++){
-                if(Object.keys(items)[m]!='statu')
-                    $("#select_concept").append($('<option value="'+(++count)+'">'+Object.keys(items)[m]+'</option>'));
-            }
+            var count=0;
 
-            var allitems=new Array();
-            var j=0;
-            for(;j<Object.keys(items).length;j++){
-                if(Object.keys(items)[j]!='statu') {
-                    var k;
-                    for (k in items[Object.keys(items)[j]]) {
-                        var entry={};
-                        entry=items[Object.keys(items)[j]][k];
-                        entry.concept=Object.keys(items)[j];
-                        allitems.push(entry);
-                    }
+            for(;m<Object.keys(items).length;m++){
+                if(Object.keys(items)[m]!='statu' && items[Object.keys(items)[m]].length>0) {
+                    $("#select_concept").append($('<option value="'+(++count)+'">'+Object.keys(items)[m]+'</option>'));
+                    item_display.item=items[Object.keys(items)[m]];
+                    item_num = item_display.item.length;
                 }
             }
-            item_display.item=allitems;
-            item_num = item_display.item.length;
+
+            var n=0;
+            for(;n<Object.keys(items).length;n++){
+                if(Object.keys(items)[n]!='statu' && items[Object.keys(items)[n]].length==0) {
+                    $("#select_concept").append($('<option value="'+(++count)+'">'+Object.keys(items)[n]+'</option>'));
+                }
+            }
+
+            // var allitems=new Array();
+            // var j=0;
+            // for(;j<Object.keys(items).length;j++){
+            //     if(Object.keys(items)[j]!='statu') {
+            //         var k;
+            //         for (k in items[Object.keys(items)[j]]) {
+            //             var entry={};
+            //             entry=items[Object.keys(items)[j]][k];
+            //             entry.concept=Object.keys(items)[j];
+            //             allitems.push(entry);
+            //         }
+            //     }
+            // }
+            // item_display.item=allitems;
 
             var i;
             for (i = 0; i < 10 && i < item_num; i++) {
@@ -233,7 +248,55 @@ $(function () {
                 }
             }
             regulatePage(1);
-        }
+         }
+
+        //items={};
+        // var count=0;
+        // var m=0;
+        // for(;m<Object.keys(data).length;m++){
+        //     $("#select_concept").append($('<option value="'+(++count)+'">'+Object.keys(data)[m]+'</option>'));
+        // }
+        //
+        // var n=0;
+        // for(;n<Object.keys(data).length;n++) {
+        //     var current_concept = Object.keys(data)[n];
+        //     $.get("get-concept?field=" + GetQueryString("field") + "&concept=" + current_concept + "&name=" + GetQueryString("name"), function (data1) {
+        //         items[current_concept] = data1.item;
+        //         console.log(current_concept==$("#select_concept").find("option:selected").text());
+        //         if(current_concept==$("#select_concept").find("option:selected").text()) {
+        //             item_display.item = data1.item;
+        //             item_num = item_display.item.length;
+        //             clearPage();
+        //             target_page = 1;
+        //             getPage(1);
+        //             regulatePage(1);
+        //         }
+        //     });
+        // }
+    });
+
+    $("#select_concept").change(function(){
+        var current_concept=$("#select_concept").find("option:selected").text();
+            if(items[current_concept].length==0){
+                $.get("get-concept?field="+GetQueryString("field")+"&concept="+current_concept+"&name="+GetQueryString("name"),function(data){
+                    items[current_concept]=data.item;
+                    item_display.item=data.item;
+                    item_num=item_display.item.length;
+                    clearPage();
+                    target_page=1;
+                    getPage(1);
+                    regulatePage(1);
+                });
+            }
+            else {
+                item_display.item = items[current_concept];
+                item_num=item_display.item.length;
+                clearPage();
+                target_page=1;
+                getPage(1);
+                regulatePage(1);
+            }
+
     });
 
     //点击切换页面标签
@@ -268,7 +331,7 @@ $(function () {
             });
     });
 
-    $("input[name='select_page']").change(function () {     //本页全选
+    $("input[name='select_page']").change(function () {     //本页u
         if($(this).prop("checked")==true){            //选中
             $("input[name='select_table']").prop("checked",false);
             var i;
@@ -310,6 +373,8 @@ $(function () {
     $("#filter").focus(function () {
         this.select();
     });
+
+
 
 });
 

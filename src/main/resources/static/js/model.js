@@ -107,6 +107,7 @@ function fill_form(field){
 $(document).ready(function(){
     //如果参数不为空则为修改原有信息，填充表单
     if(GetQueryString("field")!=null){
+        $("input[name='field_name_input']").attr("readonly",true);
         fill_form(GetQueryString("field"));
     }
 
