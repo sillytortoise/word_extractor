@@ -11,25 +11,22 @@ public class Unzip {
      **destDir 目标路径
      **所有路径须是unix格式
      */
-    public static List<String> unzipToDest(String sourceZip, String destDir) {
+    public static List<String> unzipToDest(String sourceZip, String destDir) throws Exception{
         String cmd = "unzip -n -d " + destDir + " " + sourceZip;
         String result = null;
         List<String> list = new ArrayList<>();
-        try {
-            Process ps = Runtime.getRuntime().exec(cmd);
-            BufferedReader br = new BufferedReader(new InputStreamReader(ps.getInputStream()));
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.startsWith("   creating: ") || line.startsWith("  inflating: ")) {
-                    String file_name = line.substring(13);
-                    if (file_name.indexOf("/") >= 0)
-                        file_name = file_name.substring(0, file_name.indexOf("/"));
-                    file_name = file_name.trim();
-                    list.add(file_name);
-                }
+        Process ps = Runtime.getRuntime().exec(cmd);
+        ps.waitFor();
+        BufferedReader br = new BufferedReader(new InputStreamReader(ps.getInputStream()));
+        String line;
+        while ((line = br.readLine()) != null) {
+            if (line.startsWith("   creating: ") || line.startsWith("  inflating: ")) {
+                String file_name = line.substring(13);
+                if (file_name.indexOf("/") >= 0)
+                    file_name = file_name.substring(0, file_name.indexOf("/"));
+                file_name = file_name.trim();
+                list.add(file_name);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
         return list;
     }

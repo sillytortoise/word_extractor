@@ -6,14 +6,14 @@ body{
     position:relative;
     display: inline-block;
     width: 100%;
-    height:180px;
+    height:140px;
     background-image: url(../image/top.png);
 }
 #icon{
     display: inline-block;
     position: relative;
     left:5%;
-    top:10%;
+    bottom: 10px;
 }
 .title{
     position: relative;
@@ -107,7 +107,8 @@ section{
 #field{
     display: inline-block;
     position: relative;
-    width:100%;
+    width:60%;
+    margin:0 auto;
     height:auto;
 }
 .sub_title{
@@ -120,45 +121,41 @@ section{
 }
 .field_title{
     position:relative;
-    display:inline-block;
-    left:30%;
-    vertical-align: top;
-    width:5%;
+    margin:0 auto;
     font-size:16pt;
     font-family:"Microsoft YaHei";
 }
 
 .add_field{
+    width:100%;
     position:relative;
     display:inline-block;
-    left:35%;
-    width:65%;
     font-family:"Microsoft YaHei";
 }
 .field_name,#seed_name1{
     position:relative;
     display:inline-block;
-    width:8%;
+    width:100px;
     font-size:14pt;
     font-family:"Microsoft YaHei";
 }
+
 #field_seed{
     position:relative;
     display:inline-block;
     width:100%
 }
 #concept{
+    width: 60%;
     margin-top:50px;
+    margin-left:20%;
 }
 
 #sub_btn{
-    position:relative;
-    display: inline-block;
-    left:45%;
-    width:10%;
     text-align: center;
-    height:50px;
     margin-top: 50px;
+    margin-bottom: 100px;
+    width: 100px;
     font-family: "Microsoft YaHei";
     font-size: 16px;
 }
@@ -234,7 +231,7 @@ th
     text-align:left;
     padding-top:5px;
     padding-bottom:4px;
-    background-color:#A7C942;
+    background-color: #1e87f0;
     color:#ffffff;
 }
 

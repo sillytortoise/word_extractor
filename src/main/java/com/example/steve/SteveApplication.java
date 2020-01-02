@@ -49,16 +49,11 @@ public class SteveApplication {
             ResultSet rs = stmt.executeQuery(s_user);
             while (rs.next()) {
                 String uid = rs.getString("uid");
-                List<String> user_tasks = new ArrayList<>();
-                String s_task = "select * from `" + uid + "_task` where statu='待处理' order by `task_time`";
-                Statement s = conn.createStatement();
-                ResultSet r_task = s.executeQuery(s_task);
-//                while (r_task.next()) {
-//                    user_tasks.add(r_task.getString("domain") + ":" + r_task.getString("task_name"));
-//                }
-                s.close();
-                if (user_tasks.size() > 0)
-                    taskPool.put(uid, user_tasks);
+                Statement stmt1=conn.createStatement();
+                stmt1.execute("SET SQL_SAFE_UPDATES=0");
+                String init_task = "update `" + uid + "_task` set statu='任务失败' where statu='待处理' or statu='正在处理'";
+                stmt1.executeUpdate(init_task);
+                stmt1.close();
             }
             stmt.close();
             conn.close();

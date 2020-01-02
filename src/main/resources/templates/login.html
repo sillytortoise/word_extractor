@@ -49,33 +49,35 @@
 </div>
 <nav class="uk-navbar">
     <ul class="uk-navbar-nav">
-        <li class="uk-active"><a href="index.html">首页</a></li>
+        <li><a href="index.html">首页</a></li>
         <li class="uk-active"><a href="">></a></li>
         <li class="uk-active"><a href="model.html">登录</a></li>
     </ul>
 </nav>
 <section id="main">
     <form id="field_info" method="post">
-        <div class="uk-card uk-card-default uk-card-large uk-card-body login" style="margin: 0 auto">
+        <div class="uk-card uk-card-default uk-card-large uk-card-body login" style="text-align:center;margin: 0 auto">
             <div style="margin: 0 auto;width:55px">
-                <h3 class="uk-card-title" style="width: 50px;margin: 0">登录</h3>
+                <h3 class="uk-card-title" style="width: 50px;margin: 0 auto">登录</h3>
             </div>
             <div>
-                <div style="width:190px;margin: 0 auto">
-                    <div style="width:200px;display">
+                <div style="width:200px;margin: 0 auto">
+                    <div style="width:190px;">
                         <img src="/image/user.png" style="height: 32px;width: 30px;margin-top: -2px;display: inline"/>
-                        <input name="user" class="info" value="用户名">
+                        <input name="user" class="info" value="用户名" style="width: 150px">
                     </div>
-                    <div style="width:200px">
+                    <div style="width:190px">
                         <img src="/image/password.png" style="height: 32px;width: 30px;margin-top: -2px;display: inline"/>
-                        <input name="passwd" class="info" type="password"/>
+                        <input name="passwd" class="info" type="password" style="width:150px;font-size: 14pt"/>
                     </div>
                 </div>
             </div>
-            <div style="width:100px;margin: 0 auto;margin-top: 30px">
+            <div style="width:150px;margin: 0 auto;margin-top: 30px">
                 <input class="uk-button-primary" style="width: 100px;height:40px;font-size: 14pt;font-family: 'Microsoft YaHei'" value="登 录" type="submit">
             </div>
-            <a href="register.html">没有账号？去注册</a>
+            <div>
+                <a href="register.html">没有账号？去注册</a>
+            </div>
         </div>
     </form>
 </section>

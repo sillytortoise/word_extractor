@@ -56,11 +56,11 @@ public class TaskProcessor implements Runnable {
                                 e.printStackTrace();
                             }
                         } else if (s.endsWith(".rar")) {
-                            String rar_path = SteveApplication.rootdir + "/" + user + "/" + field + "/row_doc/" + s.substring(0, s.lastIndexOf('.'));   //解压出的文件夹
-                            Unrar.unrarToDest(SteveApplication.rootdir + "/" + user + "/" + field + "/row_doc/" + s, rar_path);
-                            Unrar.generateTxt(SteveApplication.rootdir + "/" + user + "/" + field + "/row_doc/" + s, rar_path);
+                            String extract_path = SteveApplication.rootdir + "/" + user + "/" + field + "/row_doc/" + s.substring(0, s.lastIndexOf('.'));   //解压出的文件夹
+                            Unrar.unrarToDest(SteveApplication.rootdir + "/" + user + "/" + field + "/row_doc/" + s, extract_path);
+                            Unrar.generateTxt(SteveApplication.rootdir + "/" + user + "/" + field, extract_path);
                             try {
-                                String delete_folder = "rm -r " + rar_path;
+                                String delete_folder = "rm -r " + extract_path;
                                 Runtime.getRuntime().exec(delete_folder).waitFor();
                             } catch (IOException e) {
                                 e.printStackTrace();

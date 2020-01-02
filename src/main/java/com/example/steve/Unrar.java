@@ -11,32 +11,29 @@ public class Unrar {
      **destDir 目标路径
      **所有路径须是unix格式
      */
-    public static List<String> unrarToDest(String sourceRar, String destDir) {
+    public static List<String> unrarToDest(String sourceRar, String destDir) throws Exception{
         String cmd = "unrar x -o+ " + sourceRar + " " + destDir;
         String result = null;
         String parent_path = sourceRar.substring(0, sourceRar.lastIndexOf('/'));
         List<String> list = new ArrayList();
-        try {
-            Process ps = Runtime.getRuntime().exec(cmd);
-            BufferedReader br = new BufferedReader(new InputStreamReader(ps.getInputStream()));
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.startsWith("Extracting  ")) {
-                    String file_name = line.substring(12, line.indexOf(" ", 12));
-                    if (file_name.indexOf("/") >= 0)
-                        file_name = file_name.substring(0, file_name.indexOf("/"));
-                    file_name = parent_path + "/" + file_name;
-                    file_name = file_name.trim();
-                    list.add(file_name);
-                }
+        Runtime.getRuntime().exec("mkdir "+destDir).waitFor();
+        Process ps=Runtime.getRuntime().exec(cmd);
+        BufferedReader br = new BufferedReader(new InputStreamReader(ps.getInputStream()));
+        String line;
+        while ((line = br.readLine()) != null) {
+            if (line.startsWith("Extracting  ")) {
+                String file_name = line.substring(12, line.indexOf(" ", 12));
+                if (file_name.indexOf("/") >= 0)
+                    file_name = file_name.substring(0, file_name.indexOf("/"));
+                file_name = parent_path + "/" + file_name;
+                file_name = file_name.trim();
+                list.add(file_name);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
         return list;
     }
 
-    public static void generateTxt(String user_corpus_path, String path) {  //user_corpus_path存放processed.txt path是文件夹路径
+    public static void generateTxt(String user_corpus_path, String path) throws Exception{
         File folder = new File(path);
         File[] files = folder.listFiles();
         ArrayList<File> list = new ArrayList<>();
@@ -48,20 +45,16 @@ public class Unrar {
             }
             /*txt*/
             else if (file.getName().endsWith(".txt")) {
-                try {
-                    File cpy_file = new File(user_corpus_path + "/" + file.getName());       //建立文件副本
-                    FileInputStream fin = new FileInputStream(file);
-                    FileOutputStream fout = new FileOutputStream(cpy_file);
-                    byte[] buf = new byte[2048];
-                    int len;
-                    while ((len = fin.read(buf)) != -1) {
-                        fout.write(buf, 0, len);
-                    }
-                    fin.close();
-                    fout.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
+                File cpy_file = new File(user_corpus_path + "/" + file.getName());       //建立文件副本
+                FileInputStream fin = new FileInputStream(file);
+                FileOutputStream fout = new FileOutputStream(cpy_file);
+                byte[] buf = new byte[2048];
+                int len;
+                while ((len = fin.read(buf)) != -1) {
+                    fout.write(buf, 0, len);
                 }
+                fin.close();
+                fout.close();
             }
             /*pdf*/
             else if (file.getName().endsWith(".pdf")) {
