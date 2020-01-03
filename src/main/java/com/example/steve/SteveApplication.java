@@ -18,8 +18,8 @@ import java.util.*;
 @Controller
 @SpringBootApplication
 public class SteveApplication {
-    public static final String rootdir = "/home/steve/IdeaProjects/corpus";
-    public static final String extractdir = "/home/steve/concept_entity_extraction";
+    public static final String rootdir = "/datamore/cc/corpus";
+    public static final String extractdir = "/datamore/cc/entity_extraction";
     public static final String baikedir="/datamore/cc/entity_extraction/baike_extraction/";
     public static final String entitydir="/datamore/cc/entity_extraction/entity_classification/";
     public static HashMap<String, List<String>> taskPool = null;      //待执行的任务的集合 用户名 任务列表

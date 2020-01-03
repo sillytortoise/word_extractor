@@ -348,14 +348,14 @@ input[type=checkbox] {
     position: relative;
 }
 
-input[type=checkbox]:after {
+input[type=checkbox] :after{
     position: absolute;
     width: 10px;
     height: 15px;
     top: 0;
     content: " ";
-    background-color: #ff0000;
-    color: #fff;
+    background-color: #e6e6e6;
+    color: #000000;
     display: inline-block;
     visibility: visible;
     padding: 0px 3px;
