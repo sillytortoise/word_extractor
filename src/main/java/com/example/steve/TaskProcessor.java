@@ -215,6 +215,9 @@ public class TaskProcessor implements Runnable {
                     Runtime.getRuntime().exec("sh /datamore/cc/knowledge/baike.sh " +
                             SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/ " +
                             SteveApplication.baikedir + " " + field + " &>" + SteveApplication.baikedir + "test.log").waitFor();
+                    System.out.println("sh /datamore/cc/knowledge/baike.sh " +
+                            SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/ " +
+                            SteveApplication.baikedir + " " + field + " &>" + SteveApplication.baikedir + "test.log");
                     FileInputStream fin = new FileInputStream(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result_temp.txt");
                     InputStreamReader isr = new InputStreamReader(fin);
                     BufferedReader br = new BufferedReader(isr);

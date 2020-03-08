@@ -86,14 +86,14 @@ function getPage(page,origin){
                         '                           <td class="order" style="color: #1e87f0">' + ((page-1)*10+i+1) + '</td>' +
                         '                           <td class="entity" style="color: #1e87f0">' + items["item"][i]["entity"] + '</td>' +
                         '                           <td class="point" style="color: #1e87f0">' + items["item"][i]["point"] + '</td>' +
-                        '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
+                        '                           <td class="select"><input onclick="selectBox(this)" class="form-check-input select_item" type="checkbox"/></td>' +
                         '                       </tr>'));
                 } else {
                     $("#result_table").append($('<tr>' +
                         '                           <td class="order">' + ((page-1)*10+i+1) + '</td>' +
                         '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
                         '                           <td class="point">' + items["item"][i]["point"] + '</td>' +
-                        '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
+                        '                           <td class="select"><input onclick="selectBox(this)" class="form-check-input select_item" type="checkbox"/></td>' +
                         '                       </tr>'));
                 }
                 if(data["item"][i]["selected"]==true){

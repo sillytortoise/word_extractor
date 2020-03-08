@@ -1,9 +1,14 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/uikit.min.css">
     <title>概念词库管理</title>
     <script src="/js/jquery-3.4.1.min.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
     <script src="/js/uikit.js" type="text/javascript"></script>
     <script src="/js/Logout.js" type="text/javascript"></script>
     <script src="/js/conceptlib.js" type="text/javascript"></script>
@@ -11,53 +16,51 @@
 <body>
 <div class="uk-card uk-card-default uk-card-large uk-card-body" style="padding: 0">
     <div class="top">
-        <div class="title">
-            <img id="icon" src="image/icon.png">
-            <h1 id=title>领域词抽取系统</h1>
+        <div style="display: inline"><img id="icon" src="/image/icon.png"></div>
+        <div  id="title" style="display: inline">
+            <h1 style="color:white"c>领域词抽取系统</h1>
         </div>
-        <div class="user">
+        <div class="user" style="display: inline">
             <div id="log_reg" th:if="${#lists.isEmpty(iscookies)}">
-                <button id="login" class="user_info">登录</button>
+                <button id="login" type="buttonn" class="btn btn-success">登录</button>
                 <p class="separator">|</p>
-                <button id="register" class="user_info">注册</button>
+                <button id="register" type="button" class="btn btn-info">注册</button>
             </div>
             <div id="greet_out" th:unless="${#lists.isEmpty(iscookies)}">
-                <p id="greet" class="user_info" th:text="'你好，'+${user_name}"></p>
+                <button id="greet" type="button" class="btn btn-info" th:text="'你好，'+${user_name}" disabled></button>
                 <p class="separator">|</p>
-                <button id="logout" class="user_info" onclick="logout()">登出</button>
+                <button id="logout" type="button" class="btn btn-danger" onclick="logout()">登出 </button>
             </div>
         </div>
     </div>
 </div>
-<nav class="uk-navbar-container" uk-navbar>
-    <div class="uk-navbar-left">
-        <ul class="uk-navbar-nav">
-            <li><a href="/index.html">首页</a></li>
-            <li class="uk-active"><a>概念词库</a></li>
-        </ul>
-
-    </div>
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb" style="margin-bottom: 0">
+        <li class="breadcrumb-item"><a href="/index.html">首页</a></li>
+        <li class="breadcrumb-item active" aria-current="page">概念词库</li>
+    </ol>
 </nav>
+
 <section id="main">
-    <div><h1 class="sub_title">概念词库</h1></div>
+    <div class="alert alert-secondary" role="alert" style="text-align: center;margin: 0 auto"><h1 class="sub_title">概念词库</h1></div>
     <div id="upload">
-        <p class="tips" style="display: inline">概念</p>
-        <select id="select_concept" style="font-size: 14pt;font-family: 'Microsoft YaHei'">
+        <button class="btn btn-secondary" style="display: inline" disabled>概念</button>
+        <select class="uk-select" id="select_concept"  style="width:20%;display: inline">
         </select>
         <div style="display: inline">
-            <button onclick="clear_lib()" class="uk-button-primary" style="display: inline; width:100px; font-size:14pt;font-family: 'Microsoft YaHei';margin-left: 20px">清空</button>
-            <button onclick="clear_selected()" style="margin:0 auto; font-size: 14pt" class="uk-button-primary">批量删除</button>
+            <button onclick="clear_lib()" class="btn btn-primary">清空</button>
+            <button onclick="clear_selected()" class="btn btn-primary">批量删除</button>
         </div>
     </div>
-    <div style="text-align: center">
-        <table class="uk-table-striped" border="1" id="result_table">
+    <div style="text-align: center;margin: 0 auto;width: 80%;margin-top:30px;margin-bottom: 150px">
+        <table class="table table-striped" id="result_table">
             <tr>
                 <th class="order">序号</th>
                 <th class="entity">实体名称</th>
                 <th class="select">
                     <p>选择</p>
                     <div>
-                        <label><input type="checkbox" name="select_page" style="color: #ffffff;visibility: visible"/>本页选择</label><br>
+                        <label><input class="form-check-input" type="checkbox" name="select_page"/>本页选择</label><br>
                     </div>
                 </th>
             </tr>
@@ -66,7 +69,7 @@
 </section>
 <div class="bottom">
     <div style="text-align:center;">
-        <button class="uk-button-primary" style="width: auto;margin: 0 auto;;font-size: 14pt" onclick="download()">下载</button>
+        <button class="btn btn-primary" onclick="download()">下载</button>
     </div>
     <div class="uk-card-footer" style="margin: 0 auto; width: 1300px">
         <ul class="uk-tab" style="width: auto;margin: 0 auto">
@@ -78,7 +81,7 @@
             <li id="pagex"><a>...</a></li>
             <li id="pagen"><a></a></li>
             <input id="goto" style="width: 60px;height: 20px;top:8px;text-align: left"/>
-            <button id="goto_page" class="uk-button-small" style="margin-left: 20px;bottom: 15px">前往</button>
+            <button id="goto_page" class="btn btn-secondary" style="margin-left: 20px">前往</button>
         </ul>
     </div>
 </div>

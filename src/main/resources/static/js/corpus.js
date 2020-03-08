@@ -11,14 +11,16 @@ function getCorpus(){
     $("#corpus_table td").each(function () {
         $(this).remove();
     });
+    $("#corpus_table").append($('<tbody></tbody>'));
     $.get('row_corpus?field='+GetQueryString("field"),function (data, status) {
         var i;
         for(i in data["corpus"]){
-            $("#corpus_table").append($('<tr>\n' +
+            $("#corpus_table tbody").append($(
+                '<tr>\n' +
                 '                           <td>'+data["corpus"][i]["fname"]+'</td>\n' +
                 '                           <td>'+data["corpus"][i]["fsize"]+'</td>\n' +
                 '                           <td>'+data["corpus"][i]["time"]+'</td>\n' +
-                '                       </tr>'));
+                '                       </tr>\n'));
         }
     });
 }
