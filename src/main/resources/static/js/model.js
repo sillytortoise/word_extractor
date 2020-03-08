@@ -80,23 +80,23 @@ function fill_form(field){
         for(j in data["concepts"]){
             $("#concept_container").append($('<div id="add_concept'+(j-0+1).toString()+'">\n' +
                 '                        <div>\n' +
-                '                            <h3 class="field_name">概念词</h3>\n' +
-                '                            <input type="text" class="uk-input" style="position: relative;width:30%" name="concept_name_input'+(j-0+1).toString()+'" value="'+data["concepts"][j]["concept"]+'"/>\n' +
+                '                            <button class="btn btn-secondary" style="position:relative;margin-left:0px" disabled>概念词</button>\n' +
+                '                            <input type="text" class="uk-input" style="position: relative;width:30%;margin-top: 8px" name="concept_name_input'+(j-0+1).toString()+'" value="'+data["concepts"][j]["concept"]+'"/>\n' +
                 '                            <button type="button" id="delete_concept'+(j-0+1).toString()+'" onclick="del_concept(this)" class="btn btn-danger" >删除</button>\n' +
                 '                        </div>\n' +
                 '                        <div id="seed'+(j-0+1).toString()+'">\n' +
                 '                            <div id="seed_'+(j-0+1).toString()+'_1">\n' +
-                '                                <h3 class="field_name">种子词</h3>\n' +
-                '                                <input type="text" name="concept'+(j-0+1).toString()+'_seed1" value="'+data["concepts"][j]["seeds"][0]+'"/><span class="star">*</span>\n' +
+                '                                <button class="btn btn-secondary" disabled style="position: relative;margin-left: 0">种子词</button>\n\n' +
+                '                                <input class="uk-input" type="text" name="concept'+(j-0+1).toString()+'_seed1" value="'+data["concepts"][j]["seeds"][0]+'" style="position: relative;width:30%;margin-top: 8px"/><span class="star">*</span>\n' +
                 '                            </div>\n' +
                 '                        </div>\n' +
-                '                        <button type="button" id="add_seed_'+(j-0+1).toString()+'" onclick="add_seed(this)">添加种子词</button>\n' +
+                '                        <button type="button" class="btn btn-primary" id="add_seed_'+(j-0+1).toString()+'" onclick="add_seed(this)">添加种子词</button>\n' +
                 '                    </div>'));
             for (k = 1; k < data["concepts"][j]["seeds"].length; k++) {
                 $("#seed"+(j-0+1).toString()).append($('<div id="seed_'+(j-0+1).toString()+'_'+(k-0+1).toString()+'">\n' +
-                    '                        <h3 class="field_name">种子词</h3>\n'+
-                    '                        <input type="text" name="concept'+(j-0+1).toString()+'_seed'+(k-0+1).toString()+'" value="'+data["concepts"][j]["seeds"][k]+'"/>\n' +
-                    '                        <button type="button" id="del_seed_'+(j-0+1).toString()+'_'+(k-0+1).toString()+'" onclick="del_con_seed(this)">删除</button>\n' +
+                    '                        <button class="btn btn-secondary" disabled>种子词</button>\n'+
+                    '                        <input type="text" class="uk-input" name="concept'+(j-0+1).toString()+'_seed'+(k-0+1).toString()+'" value="'+data["concepts"][j]["seeds"][k]+'" style="position: relative;width:30%;margin-top: 8px"/>\n' +
+                    '                        <button type="button" class="btn btn-danger" id="del_seed_'+(j-0+1).toString()+'_'+(k-0+1).toString()+'" onclick="del_con_seed(this)">删除</button>\n' +
                     '                    </div>'));
             }
             record[j - 0 + 1] = data["concepts"][j]["seeds"].length;

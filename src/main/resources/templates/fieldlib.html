@@ -48,18 +48,20 @@
             <button onclick="clear_lib()" class="btn btn-primary">清空</button>
             <button onclick="clear_selected()" class="btn btn-primary">批量删除</button>
         </div>
-        <table style="margin-top: 30px" class="table table-striped" id="result_table">
-            <tr>
-                <th class="order">序号</th>
-                <th class="entity">实体名称</th>
-                <th class="select">
-                    <p>选择</p>
-                    <div>
-                        <label><input type="checkbox" class="form-check-input" name="select_page"/>本页选择</label><br>
-                    </div>
-                </th>
-            </tr>
-        </table>
+        <div class="card">
+            <table style="margin-top: 30px" class="table table-striped" id="result_table">
+                <tr>
+                    <th class="order">序号</th>
+                    <th class="entity">实体名称</th>
+                    <th class="select">
+                        <p>选择</p>
+                        <div>
+                            <label><input type="checkbox" class="form-check-input" name="select_page"/>本页选择</label><br>
+                        </div>
+                    </th>
+                </tr>
+            </table>
+        </div>
     </div>
 </section>
 <div class="bottom" style="text-align: center">
