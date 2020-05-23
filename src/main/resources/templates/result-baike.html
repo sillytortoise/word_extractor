@@ -51,11 +51,11 @@
             <option value = "3">按分数</option>
         </select>
         <input class="uk-input" id="filter" value="输入数字" style="font-size: 14pt;width:100px;font-family: 'Microsoft YaHei'"/>
-        <button id="confirm" class="btn btn-primary">确认</button>
         <div style="display: inline">
-            <button onclick="show_new()" class="btn btn-primary">显示新词</button>
-            <button onclick="show_all()" class="btn btn-primary" style="display: inline; width:120px; font-size:14pt;font-family: 'Microsoft YaHei';margin-left: 20px">显示所有词</button>
+            <label style="display: inline"><input type="radio" name="whattoshow" value="1" >显示新词</input></label>
+            <label style="display: inline"><input type="radio" name="whattoshow" value="2" >显示所有词</input></label>
         </div>
+        <button id="confirm" class="btn btn-primary">确认</button>
     </div>
     <div class="card" style="text-align: center;margin: 0 auto;width: 80%;margin-top:30px;margin-bottom: 150px">
         <table class="table table-striped" id="result_table">

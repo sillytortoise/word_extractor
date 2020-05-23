@@ -1,7 +1,8 @@
-var items;
+var items={};
 var target_page;        //当前在哪页
-var item_num;           //可以显示多少条
-var item_display={};
+var page_num;           //可以显示多少条
+var select_table=false;
+var concept;
 
 function GetQueryString(name) {
     var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
@@ -11,86 +12,57 @@ function GetQueryString(name) {
     return null;
 }
 
-function show_new() {
-    item_display.item.sort(function (a, b) {
-        if(a.isnew==b.isnew)
-            return 0;
-        else if(a.isnew==true && b.isnew==false)
-            return -1;
-        else return 1;
-    });
-    var i;
-    for(i=0;item_display["item"][i].isnew==true;i++){}
-    item_num=i;
-    target_page=1;
-    clearPage();
-    getPage(1);
-    regulatePage(1);
-    $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
-}
 
-function show_all(){
-    item_num=item_display.item.length;
-    item_display.item.sort(function(a,b){
-        return b.point-a.point;
-    });
-    clearPage();
-    getPage(1);
-    regulatePage(1);
-}
 
 function add_items() {
-    var result_items = new Array();
-    for (var i = 0; i < item_display.item.length; i++) {
-        if (item_display.item[i].isnew == true && item_display.item[i].selected == true) {
-            var item = {};
-            item.concept=item_display.item[i].concept;
-            item.point = item_display.item[i].point;
-            item.entity = item_display.item[i].entity;
-            item_display.item[i].isnew=false;
-            result_items.push(item);
-        }
+    if(window.confirm('确定添加所选词？请等待页面自动跳转')){
+        $.ajax({
+            type: "POST",
+            url:"result-entity.html?field=" + GetQueryString("field")+"&name="+GetQueryString("name"),
+            contentType: "application/json;charset=utf-8",
+            success:function(data){
+                $(location).attr("href","conceptlib.html?field="+GetQueryString("field"));
+            },
+            error:function (message) {
+                console.log(message);
+            }
+        });
     }
-    var result = {};
-    result.item = result_items;
+}
+
+function getPage(page){
+    if(page_num==0)
+        return;
     $.ajax({
         type: "POST",
-        url: "result-entity.html?field=" + GetQueryString("field"),
+        url: "getPage?field=" + GetQueryString("field")+"&name="+GetQueryString("name")+"&concept="+concept+"&page="+page,
         contentType: "application/json;charset=utf-8",
-        data: JSON.stringify(result),
-        success: function () {
-            alert("提交成功!");
-            clearPage();
-            getPage(target_page);
-            regulatePage(target_page);
+        data: JSON.stringify(items[concept]),
+        success: function (data) {
+            items[concept]["item"]=data["item"];
+            for(var i=0; i<10 && i<data["item"].length;i++){
+                $("#result_table").append($('<tr>' +
+                    '                           <td class="order">' + ((page-1)*10+i+1) + '</td>' +
+                    '                           <td class="entity">' + items[concept]["item"][i]["entity"] + '</td>' +
+                    '                           <td class="point">' + items[concept]["item"][i]["point"] + '</td>' +
+                    '                           <td class="select"><input onclick="selectBox(this)" class="form-check-input select_item" type="checkbox"/></td>' +
+                    '                       </tr>'));
+                if (items[concept]["item"][i]["isnew"]) {          //高亮显示
+                    $($("#result_table tr")[i+1]).css('color','#1e87f0');
+
+                }
+                else{
+                    $($("#result_table tr")[i+1]).css('color','#212529');
+                }
+                if(data["item"][i]["selected"]==1 || select_table){
+                    $($(".select_item")[i]).prop("checked",true);
+                }
+            }
         },
         error: function (message) {
             console.log(message);
         }
     });
-}
-
-function getPage(page){
-    for(var i=(page-1)*10; i<page*10 && i<item_display["item"].length && i<item_num;i++){
-        if (item_display["item"][i]["isnew"]) {          //高亮显示
-            $("#result_table").append($('<tr>' +
-                '                           <td class="order" style="color: #1e87f0">' + (i + 1) + '</td>' +
-                '                           <td class="entity" style="color: #1e87f0">' + item_display["item"][i]["entity"] + '</td>' +
-                '                           <td class="point" style="color: #1e87f0">' + item_display["item"][i]["point"] + '</td>' +
-                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
-                '                       </tr>'));
-        } else {
-            $("#result_table").append($('<tr>' +
-                '                           <td class="order">' + (i + 1) + '</td>' +
-                '                           <td class="entity">' + item_display["item"][i]["entity"] + '</td>' +
-                '                           <td class="point">' + item_display["item"][i]["point"] + '</td>' +
-                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
-                '                       </tr>'));
-        }
-        if(item_display.item[i].selected==true){
-            $($(".select_item")[i%10]).prop("checked",true);
-        }
-    }
 }
 
 
@@ -107,7 +79,7 @@ function clearPage(){
 }
 
 function regulatePage(target_page){
-    $("#pagen a").text(item_num %10==0 ? item_num/10 : Math.ceil(item_num/10));
+    $("#pagen a").text(page_num);
     if(target_page!=1){
         $("ul[class='uk-tab'] li").each(function () {
             if($(this).attr("id")!="pagen") {
@@ -178,126 +150,60 @@ function regulatePage(target_page){
 
 function selectBox(obj){
     var index=$("td[class='select']").index($(obj).parent());
-    index+=(target_page-1)*10;
     if($(obj).prop("checked")){        //选中
-        item_display.item[index].selected=true;
+        items[concept]["item"][index].selected=1;
     }
     else{
-        item_display.item[index].selected=false;
+        items[concept]["item"][index].selected=0;
+    }
+    items[concept]["item"][index].entity=items[concept]["item"][index].entity.replace(/\+/g,"%2B");
+    items[concept]["item"][index].entity=items[concept]["item"][index].entity.replace(/\&/g,"%26");
+    $.post("result-select?field=" + GetQueryString("field")+"&name="+GetQueryString("name")+"&concept="+concept+"&entity="+items[concept]["item"][index].entity+"&selected="+items[concept]["item"][index].selected,function(data,statu){
+    });
+}
+
+function isNumber(val){
+    var regPos = /^\d+(\.\d+)?$/; //非负浮点数
+    var regNeg = /^(-(([0-9]+\.[0-9]*[1-9][0-9]*)|([0-9]*[1-9][0-9]*\.[0-9]+)|([0-9]*[1-9][0-9]*)))$/; //负浮点数
+    if(regPos.test(val) || regNeg.test(val)){
+        return true;
+    }else{
+        return false;
     }
 }
 
 $(function () {
     target_page=1;     //初始时第一页
+    $("input[name='whattoshow']").get(1).checked=true;
 
-    $.post("result-data-entity?field=" + GetQueryString("field") + "&name=" + GetQueryString("name"), function (data, status) {
-        if(data.statu!=null && data.statu==0){
-            $(location).attr("href","login.html");
+    $.get("get_concepts?field=" + GetQueryString("field") , function (data, status) {
+        var count=1;
+        concept=data.concepts[0];
+        for(var i=0;i<data["concepts"].length;i++){
+            $("#select_concept").append($('<option value="'+(count++)+'">'+data.concepts[i]+'</option>'))
+            var filter={};
+            filter["neworall"]="all";
+            filter["rankorpoint"]="all";
+            filter["num"]=-1;
+            filter["select"]="none";
+            items[data.concepts[i]]={};
+            items[data.concepts[i]]["filter"]=filter;
+            items[data.concepts[i]]["item"]=new Array();
         }
-        else {
-            items = data;
-            var m=0;
-            var count=0;
-
-            for(;m<Object.keys(items).length;m++){
-                if(Object.keys(items)[m]!='statu' && items[Object.keys(items)[m]].length>0) {
-                    $("#select_concept").append($('<option value="'+(++count)+'">'+Object.keys(items)[m]+'</option>'));
-                    item_display.item=items[Object.keys(items)[m]];
-                    item_num = item_display.item.length;
-                }
-            }
-
-            var n=0;
-            for(;n<Object.keys(items).length;n++){
-                if(Object.keys(items)[n]!='statu' && items[Object.keys(items)[n]].length==0) {
-                    $("#select_concept").append($('<option value="'+(++count)+'">'+Object.keys(items)[n]+'</option>'));
-                }
-            }
-
-            // var allitems=new Array();
-            // var j=0;
-            // for(;j<Object.keys(items).length;j++){
-            //     if(Object.keys(items)[j]!='statu') {
-            //         var k;
-            //         for (k in items[Object.keys(items)[j]]) {
-            //             var entry={};
-            //             entry=items[Object.keys(items)[j]][k];
-            //             entry.concept=Object.keys(items)[j];
-            //             allitems.push(entry);
-            //         }
-            //     }
-            // }
-            // item_display.item=allitems;
-
-            var i;
-            for (i = 0; i < 10 && i < item_num; i++) {
-                if (item_display.item[i]["isnew"]) {          //高亮显示
-                    $("#result_table").append($('<tr>' +
-                        '                           <td class="order" style="color: #1e87f0">' + (i + 1) + '</td>' +
-                        '                           <td class="entity" style="color: #1e87f0">' + item_display.item[i]["entity"] + '</td>' +
-                        '                           <td class="point" style="color: #1e87f0">' + item_display.item[i]["point"] + '</td>' +
-                        '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
-                        '                       </tr>'));
-                } else {
-                    $("#result_table").append($('<tr>' +
-                        '                           <td class="order">' + (i + 1) + '</td>' +
-                        '                           <td class="entity">' + item_display.item[i]["entity"] + '</td>' +
-                        '                           <td class="point">' + item_display.item[i]["point"] + '</td>' +
-                        '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
-                        '                       </tr>'));
-                }
-            }
-            regulatePage(1);
-         }
-
-        //items={};
-        // var count=0;
-        // var m=0;
-        // for(;m<Object.keys(data).length;m++){
-        //     $("#select_concept").append($('<option value="'+(++count)+'">'+Object.keys(data)[m]+'</option>'));
-        // }
-        //
-        // var n=0;
-        // for(;n<Object.keys(data).length;n++) {
-        //     var current_concept = Object.keys(data)[n];
-        //     $.get("get-concept?field=" + GetQueryString("field") + "&concept=" + current_concept + "&name=" + GetQueryString("name"), function (data1) {
-        //         items[current_concept] = data1.item;
-        //         console.log(current_concept==$("#select_concept").find("option:selected").text());
-        //         if(current_concept==$("#select_concept").find("option:selected").text()) {
-        //             item_display.item = data1.item;
-        //             item_num = item_display.item.length;
-        //             clearPage();
-        //             target_page = 1;
-        //             getPage(1);
-        //             regulatePage(1);
-        //         }
-        //     });
-        // }
-    });
-
-    $("#select_concept").change(function(){
-        var current_concept=$("#select_concept").find("option:selected").text();
-            if(items[current_concept].length==0){
-                $.get("get-concept?field="+GetQueryString("field")+"&concept="+current_concept+"&name="+GetQueryString("name"),function(data){
-                    items[current_concept]=data.item;
-                    item_display.item=data.item;
-                    item_num=item_display.item.length;
-                    clearPage();
-                    target_page=1;
-                    getPage(1);
-                    regulatePage(1);
-                });
-            }
-            else {
-                item_display.item = items[current_concept];
-                item_num=item_display.item.length;
-                clearPage();
-                target_page=1;
+        $.ajax({
+            type:"post",
+            url:"getConceptPageNum?field="+GetQueryString("field") + "&name=" + GetQueryString("name") + "&concept=" + data.concepts[0],
+            contentType: "application/json;charset=utf-8",
+            data:JSON.stringify(items[data.concepts[0]].filter),
+            success: function(result) {
+                page_num=result.page_num;
                 getPage(1);
                 regulatePage(1);
             }
+        });
 
     });
+
 
     //点击切换页面标签
     $("ul[class='uk-tab'] li").each(function () {
@@ -331,119 +237,156 @@ $(function () {
             });
     });
 
-    $("input[name='select_page']").change(function () {     //本页u
-        if($(this).prop("checked")==true){            //选中
-            $("input[name='select_table']").prop("checked",false);
-            var i;
-            for(i=(target_page-1)*10;i<target_page*10;i++){
-                item_display.item[i].selected=true;
-            }
+    $("#firstPage").click(function () {
+        if(page_num>0){
+            target_page=1;
             clearPage();
-            getPage(target_page);
+            getPage(1);
+            regulatePage(1);
         }
-        else{
-            var i;
-            for(i=(target_page-1)*10;i<target_page*10;i++){
-                item_display.item[i].selected=false;
-            }
-            clearPage();
-            getPage(target_page);
-        }
-
     });
 
-    $("input[name='select_table']").change(function () {
-        if($(this).prop("checked")==true){            //选中
-            $("input[name='select_page']").prop("checked",false);
-            var i;
-            for(i=0;i<item_num;i++){
-                item_display.item[i].selected=true;
-            }
-        }
-        else{
-            var i;
-            for(i=0;i<item_num;i++){
-                item_display.item[i].selected=false;
-            }
-        }
-        clearPage();
-        getPage(target_page);
-    });
 
     $("#filter").focus(function () {
         this.select();
     });
 
+    $("#confirm").click(function () {
+        concept=$("#select_concept").find("option:selected").text();
+        $("input[name='select_page']").prop("checked",false);
+        $("input[name='select_filtered']").prop("checked",false);
+        $("input[name='select_table']").prop("checked",false);
 
+
+        if($("#select_cond").val()==1){
+            /*改状态*/
+            items[concept]["filter"]["rankorpoint"]="point";
+            items[concept]["filter"]["num"]=-1;
+        }
+        else if($("#select_cond").val()==2){      //按排序
+            items[concept]["filter"]["rankorpoint"]="rank";
+            items[concept]["filter"]["num"]=$("#filter").val();
+        }
+        else if($("#select_cond").val()==3){   //按分数
+            items[concept]["filter"]["rankorpoint"]="point";
+            items[concept]["filter"]["num"]=$("#filter").val();
+        }
+
+        if($("input[name='whattoshow']").get(0).checked==true){
+            items[concept]["filter"]["neworall"]="new";
+        }
+        else items[concept]["filter"]["neworall"]="all";
+
+        if(!isNumber(items[concept]["filter"]["num"]))
+            items[concept]["filter"]["num"]=-1;
+        /*统计有多少ye*/
+        $.ajax({
+            type: "POST",
+            url: "getConceptPageNum?field=" + GetQueryString("field")+"&name="+GetQueryString("name")+"&concept="+concept,
+            contentType: "application/json;charset=utf-8",
+            data:JSON.stringify(items[concept]["filter"]),
+            success: function(result) {
+                page_num=result.page_num;
+                target_page=1;
+                clearPage();
+                getPage(1);
+                regulatePage(1);
+            }
+        });
+    });
+
+    $("input[name='select_page']").change(function () {     //本页全选
+        select_table=false;
+        if($(this).prop("checked")==true){            //选中
+            $("input[name='select_filtered']").prop("checked",false);
+            var i;
+            for(i=0;i<items[concept]["item"].length;i++){
+                $(".select_item").get(i).checked=true;
+                selectBox($(".select_item")[i]);
+            }
+            items[concept]["filter"]["submit"]="page";
+        }
+        else{
+            var i;
+            for(i=0;i<items[concept]["item"].length;i++){
+                $(".select_item").get(i).checked=false;
+                selectBox($(".select_item")[i]);
+            }
+            items[concept]["filter"]["submit"]="table";
+        }
+
+    });
+
+    $("input[name='select_filtered']").change(function () {        //﻿筛选结果全选
+        select_table=false;
+        var flag;
+        if($(this).prop("checked")==true){            //选中
+            $("input[name='select_page']").prop("checked",false);
+
+            var i;
+            for(i=0;i<items[concept]["item"].length;i++){
+                $(".select_item").get(i).checked=true;
+                items[concept]["item"][i].selected=1;
+            }
+            items[concept]["filter"]["submit"]="table";
+            flag=1;
+        }
+        else{
+            var i;
+            for(i=0;i<items[concept]["item"].length;i++){
+                $(".select_item").get(i).checked=false;
+                items[concept]["item"][i].selected=0;
+            }
+            items[concept]["filter"]["submit"]="page";
+            flag=0;
+        }
+        $.ajax({
+            type: "POST",
+            url: "select_filtered?field=" + GetQueryString("field")+"&name="+GetQueryString("name")+"&concept="+concept+"&flag="+flag,
+            contentType: "application/json;charset=utf-8",
+            data: JSON.stringify(items[concept]["filter"]),
+            success: function (data) {
+            },
+            error: function (message) {
+                console.log(message);
+            }
+        });
+
+    });
+
+    $("input[name='select_table']").change(function () {
+        var flag;
+        if($(this).prop("checked")==true) {            //选中
+            $("input[name='select_page']").prop("checked", false);
+            $("input[name='select_filtered']").prop("checked", false);
+            var i;
+            for(i=0;i<items[concept]["item"].length;i++){
+                $(".select_item").get(i).checked=true;
+                items[concept]["item"][i].selected=1;
+            }
+            flag=1;
+            select_table=true;
+        }
+        else{
+            var i;
+            for(i=0;i<items[concept]["item"].length;i++){
+                $(".select_item").get(i).checked=false;
+                items[concept]["item"][i].selected=0;
+            }
+            flag=0;
+            select_table=false;
+        }
+        $.ajax({
+            type: "POST",
+            url: "select_table?field=" + GetQueryString("field")+"&name="+GetQueryString("name")+"&flag="+flag,
+            contentType: "application/json;charset=utf-8",
+            success: function (data) {
+            },
+            error: function (message) {
+                console.log(message);
+            }
+        });
+    });
 
 });
 
-//confirm click
-function confirm_cond(){
-    if($("#select_concept").val()==1){
-        var allitems=new Array();
-        var j=0;
-        for(;j<Object.keys(items).length;j++){
-            if(Object.keys(items)[j]!='statu') {
-                var k;
-                for (k in items[Object.keys(items)[j]]) {
-                    var entry={};
-                    entry=items[Object.keys(items)[j]][k];
-                    entry.concept=Object.keys(items)[j];
-                    allitems.push(entry);
-                }
-            }
-        }
-        item_display.item=allitems;
-    }
-    else{
-        item_display.item=items[$("#select_concept").find("option:selected").text()];
-    }
-    if($("#select_cond").val()==1){
-        item_num=item_display.item.length;
-        target_page=1;
-        clearPage();
-        $("#pagen a").text(item_num%10==0?item_num/10:Math.ceil(item_num/10));
-        getPage(1);
-        regulatePage(1);
-    }
-    else if($("#select_cond").val()==2){   //按排序
-        item_display["item"].sort(function (a, b) {
-            return b["point"]-a["point"];
-        });
-
-        var filter_num=$("#filter").val();
-        if(filter_num>=1 && filter_num%1==0){   //如果过滤数为整数，显示filter_num条数据
-            item_num=filter_num;
-        }
-        clearPage();
-        target_page=1;
-        getPage(1);
-        regulatePage(1);
-    }
-    else if($("#select_cond").val()==3){   //按分数由大到小排序
-        item_display["item"].sort(function (a, b) {
-            return b["point"]-a["point"];
-        });
-
-        if($("#filter").val()!=""&& $("#filter").val()>=0 && $("#filter").val()<=1)
-        {     //如果满足过滤条件，显示过滤结果
-            var filter_point = $("#filter").val();
-
-            var i;
-            var num=0;
-            for(i in item_display["item"]){
-                if(item_display["item"][i]["point"]<filter_point)
-                    break;
-                num++;
-            }
-            item_num = num;
-        }
-        target_page = 1;
-        clearPage();
-        getPage(1);
-        regulatePage(1);
-
-    }
-
-}

@@ -86,8 +86,13 @@
             $("#float_window").css('display','block');
         }
 
+
         function close_window() {
             $("#float_window").css('display','none');
+        }
+
+        function close_windowx(){
+            $("#float_window_baike").css('display','none');
         }
         //提交语料选择创建任务
         function create_task(e){
@@ -104,6 +109,8 @@
             }
             else if($(e).attr("id")=='task-btn2'){
                 task_type=2;
+                if(window.confirm('请稍等，并选择类别')){
+                } else return;
             }
             else{
                 task_type=3;
@@ -128,7 +135,21 @@
                                 alert("创建失败，请设置种子词或进行领域词抽取！");
                             }
                             else if(task_type==2 && data.stat==2){
-                                alert("创建成功!");
+                                console.log(data);
+                                $("#select_category").empty();
+                                $("#select_category").append($('<tbody></tbody>'));
+                                var i;
+                                for(i in data["seed_type"]){
+                                    $("#select_category tbody").append($(
+                                        '<tr>\n' +
+                                        '                            <td scope="col" class="select"><input type="checkbox" name="box_type" value="'+i+'"/></td>\n'+
+                                        '                            <td scope="col" class="filename">'+data["seed_type"][i]["type"]+'</td>\n'+
+                                        '                            <td scope="col" class="size">'+data["seed_type"][i]["num"]+'</td>\n'+
+                                        '</tr>\n'
+                                    ));
+                                }
+                                $("#float_window_baike").css('display','block');   //show
+                                return;
                             }
                             else if(task_type==3 && data.stat==3){
                                 alert("没有设置概念!")
@@ -140,15 +161,19 @@
                                 alert("创建成功!");
                             }
                             close_window();
+                            $("#task_table tbody").remove();
                             getTask();
+                            return;
                         }else{
                             alert("提交失败");
                             close_window();
+                            return;
                         }
                     },
                     error: function (data){
                         alert("提交失败");
                         close_window();
+                        return;
                     }
 
                 });
@@ -159,22 +184,55 @@
             if (e.target == $("#float_window")) {
                 $("#float_window").style.display = "none";
             }
+            if(e.target==$("#float_window_baike")){
+                $("#float_window_baike").style.display="none";
+            }
         };
         $(function () {
             field_name=GetQueryString("field");
             getTask();
-            $("#select_corpus").append($('<tbody></tbody>'));
             $.get("task_corpus?field="+GetQueryString("field"),function (data,status) {
+                $("#select_corpus").append($('<tbody></tbody>'));
                 var i;
                 for(i in data["corpus"]){
-                    $("#select_corpus tbody").append($('<tr id="tr_'+i+'">' +
-                        '                            <td class="select"><input type="checkbox" name="box" value="'+i+'"/></td>'+
-                        '                            <td class="filename">'+data["corpus"][i]["fname"]+'</td>'+
-                        '                            <td class="size">'+data["corpus"][i]["fsize"]+'</td>'+
-                        '                            <td class="time">'+data["corpus"][i]["time"]+'</td>'+
-                        '</tr>'));
+                    $("#select_corpus tbody").append($(
+                        '<tr>\n' +
+                        '                            <td scope="col" class="select"><input type="checkbox" name="box" value="'+i+'"/></td>\n'+
+                        '                            <td scope="col" class="filename">'+data["corpus"][i]["fname"]+'</td>\n'+
+                        '                            <td scope="col" class="size">'+data["corpus"][i]["fsize"]+'</td>\n'+
+                        '                            <td scope="col" class="time">'+data["corpus"][i]["time"]+'</td>\n'+
+                        '</tr>\n'
+                    ));
                 }
-            })
+            });
+            $("#sub_btnx").click(function () {
+                $("#float_window_baike").css('display','none');
+                var types_selected = '';
+                var obj=document.getElementsByName("box_type");
+                var j;
+                for (j in obj){
+                    if(obj[j].checked){
+                        types_selected += $(obj[j]).parent().next().text() + ",";
+                    }
+                }
+                if(types_selected==''){
+                    alert('创建失败，未选择任何类别！');
+                    return;
+                }
+                $.ajax({
+                    url: "task.html?field=" + field_name,
+                    data: JSON.stringify({"choose_type":types_selected,"task":2}),//发送的数据 语料名称 任务类型
+                    type: "post",
+                    contentType: "application/json;charset=UTF-8",
+                    success: function (data1) {
+                        alert('创建成功!');
+                        getTask();
+                        return;
+                    }
+                });
+                return;
+            });
+
         });
     </script>
 </head>
@@ -218,11 +276,11 @@
         <button class="btn btn-primary" id="task-btn3" onclick="create_task(this)" style="display: inline">创建实体扩充任务</button>
     </div>
     <div class="card" style="display: block;text-align: center;margin: 0 auto;margin-top:30px;width:80%;height:300px;overflow: auto">
-        <table class="table table-striped" id="task_table" style="position:relative;width:auto ">
+        <table class="table table-striped" id="task_table">
             <thead>
                 <tr>
                     <th scope="col">任务名</th>
-                    <th scope="col">选择语料</th>
+                    <th scope="col">选择语料(类别)</th>
                     <th scope="col">创建时间</th>
                     <th scope="col">任务状态</th>
                     <th scope="col">任务结果</th>
@@ -238,16 +296,39 @@
         </div>
         <h3 class="uk-card-title sub_title">选择语料</h3>
         <div>
-            <table class="uk-table-striped" id="select_corpus">
-                <tr>
-                    <th class="select">选择</th>
-                    <th class="filename">文件名</th>
-                    <th class="size">文件大小</th>
-                    <th class="time">上传时间</th>
-                </tr>
+            <table class="table table-striped" id="select_corpus">
+                <thead>
+                    <tr>
+                        <th scope="col" class="select">选择</th>
+                        <th scope="col" class="filename">文件名</th>
+                        <th scope="col" class="size">文件大小</th>
+                        <th scope="col" class="time">上传时间</th>
+                    </tr>
+                </thead>
             </table>
             <div style="text-align: center;margin: 0 auto">
                 <input id="sub_btn" type="submit" value="确认" class="btn btn-primary" onclick="create_task(this)"/>
+            </div>
+        </div>
+    </div>
+    <!--弹窗-->
+    <div id="float_window_baike" class="uk-card uk-card-default uk-card-body uk-width-1-2@m">
+        <div id="closex">
+            <button id="close-buttonx" class="close" aria-label="关闭" onclick="close_windowx()" style="background-color: red"><span>&times;</span></button>
+        </div>
+        <h3 class="uk-card-title sub_title">选择类别</h3>
+        <div>
+            <table class="table table-striped" id="select_category">
+                <thead>
+                <tr>
+                    <th scope="col" class="select">选择</th>
+                    <th scope="col" class="filename">类别</th>
+                    <th scope="col" class="size">出现次数</th>
+                </tr>
+                </thead>
+            </table>
+            <div style="text-align: center;margin: 0 auto">
+                <input id="sub_btnx" type="submit" value="确认" class="btn btn-primary"/>
             </div>
         </div>
     </div>

@@ -33,7 +33,7 @@ public class TaskProcessor implements Runnable {
 
                 if (task_name.charAt(task_name.indexOf(':') + 1) == '领') {
 
-                    String corpus = "select * from `" + user + "_task` where `task_name`='" + task_name.substring(task_name.indexOf(':') + 1) + "'";
+                    String corpus = "select * from `" + user + "_task` where `domain`='"+field+"' and `task_name`='" + task_name.substring(task_name.indexOf(':') + 1) + "'";
                     ResultSet rs = stmt.executeQuery(corpus);
                     rs.next();
                     String files = rs.getString("corpus");
@@ -142,35 +142,35 @@ public class TaskProcessor implements Runnable {
 
 //                        Connection conn1 = DBConnection.getConn();
 //                        conn1.setAutoCommit(false);
-//                        try {
+                        try {
 //                            //建表存储词库抽取结果
 //                            String create_field_table = "create table `" + user + "_" + task_name.replace(":", "_") + "` (entity varchar(20) primary key, point double, selected boolean)";
 //                            Statement st = conn1.createStatement();
 //                            st.execute(create_field_table);
 //                            String insert_entity = "insert ignore into `" + user + "_" + task_name.replace(":", "_") + "` values (?,?,0)";
 //                            //抽取结果入库
-//                            while ((line_field = br_field.readLine()) != null) {
-//                                int separator = line_field.indexOf('[');
-//                                String latter_part = line_field.substring(separator + 1, line_field.length() - 1);
-//                                String former_part = line_field.substring(0, separator);
-//                                String[] ss = latter_part.split(", ");
-//                                String latter_part_modified = "";
-//                                for (String s : ss) {
-//                                    latter_part_modified += s;
-//                                }
-//                                String line_result = former_part + latter_part_modified + "\n";
-//                                fw_field.write(line_result);
+                            while ((line_field = br_field.readLine()) != null) {
+                                int separator = line_field.indexOf('[');
+                                String latter_part = line_field.substring(separator + 1, line_field.length() - 1);
+                                String former_part = line_field.substring(0, separator);
+                                String[] ss = latter_part.split(", ");
+                                String latter_part_modified = "";
+                                for (String s : ss) {
+                                    latter_part_modified += s;
+                                }
+                                String line_result = former_part + latter_part_modified + "\n";
+                                fw_field.write(line_result);
 //                                PreparedStatement ptmt = conn1.prepareStatement(insert_entity);
 //                                ptmt.setString(1, latter_part_modified);
 //                                ptmt.setString(2, former_part.trim());
 //                                ptmt.executeUpdate();
 //                                ptmt.close();
-//                            }
+                            }
 //                            conn1.commit();
-//                        } catch(SQLException e){
-//                            e.printStackTrace();
+                        } catch(Exception e){
+                            e.printStackTrace();
 //                            conn1.rollback();
-//                        }
+                        }
 
                         fin.close();
                         isr.close();
@@ -196,7 +196,7 @@ public class TaskProcessor implements Runnable {
                         seeds = seeds.replace(' ', '\n');
                         fw.write(seeds);
                     } else {
-                        String select_lib = "select `entity` from `" + user + "_" + field + "` order by `point` desc limit 20";
+                        String select_lib = "select `entity` from `" + user + "_" + field + "` order by `point` desc limit 50";
                         rs = st.executeQuery(select_lib);
                         while (rs.next()) {
                             fw.write(rs.getString(1) + "\n");
@@ -206,12 +206,37 @@ public class TaskProcessor implements Runnable {
                     rs.close();
                     st.close();
                     stmt.close();
-                    conn.close();
 
                     while (SteveApplication.fields_baike.contains(field)) {
                         Thread.sleep(1000);
                     }
                     SteveApplication.fields_baike.add(field);
+                    File choose_type=new File(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" +
+                            task_name.substring(task_name.indexOf(':') + 1) + "/" + field + "_chosen_type.txt");
+                    if(!choose_type.exists())
+                        choose_type.createNewFile();
+                    String select_type="select corpus from "+user+"_task where domain=? and task_name=?";
+                    PreparedStatement ptmt=conn.prepareStatement(select_type);
+                    ptmt.setString(1,field);
+                    ptmt.setString(2,task_name.substring(task_name.indexOf(':') + 1));
+                    ResultSet types=ptmt.executeQuery();
+                    types.next();
+                    String type_list=types.getString("corpus");
+                    String[] types_chosen=type_list.split("[+]");
+                    FileWriter cw=new FileWriter(choose_type);
+                    for(int i=0;i<types_chosen.length;i++){
+                        if(i==0)
+                            cw.write(types_chosen[i]);
+                        else{
+                            cw.write("\n");
+                            cw.write(types_chosen[i]);
+                        }
+                    }
+                    types.close();
+                    cw.close();
+                    ptmt.close();
+
+
                     Runtime.getRuntime().exec("sh /datamore/cc/knowledge/baike.sh " +
                             SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/ " +
                             SteveApplication.baikedir + " " + field + " &>" + SteveApplication.baikedir + "test.log").waitFor();
@@ -234,6 +259,7 @@ public class TaskProcessor implements Runnable {
                     isr.close();
                     br.close();
                     fw_baike.close();
+                    conn.close();
                     SteveApplication.fields_baike.remove(field);
                 } else {                       //实体扩充
                     String select_entity_set = "select entity from `" + user + "_" + field + "`";

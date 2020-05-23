@@ -48,7 +48,8 @@
         <select class="uk-select" id="select_concept"  style="width:20%;display: inline">
         </select>
         <div style="display: inline">
-            <button onclick="clear_lib()" class="btn btn-primary">清空</button>
+            <button onclick="clear_concept()" class="btn btn-primary">清空概念</button>
+            <button onclick="clear_lib()" class="btn btn-primary">清空词库</button>
             <button onclick="clear_selected()" class="btn btn-primary">批量删除</button>
         </div>
     </div>
@@ -73,6 +74,7 @@
     </div>
     <div class="uk-card-footer" style="margin: 0 auto; width: 1300px">
         <ul class="uk-tab" style="width: auto;margin: 0 auto">
+            <button id="firstPage" class="btn btn-outline-primary" style="display: inline">首页</button>
             <li id="page1" class="uk-active"><a>1</a></li>
             <li id="page2"><a>2</a></li>
             <li id="page3"><a>3</a></li>

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.util.JSONPObject;
 import org.apache.ibatis.jdbc.SQL;
 import org.apache.juli.logging.Log;
+import org.apache.tools.ant.taskdefs.condition.Http;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -17,11 +18,13 @@ import org.springframework.web.servlet.ModelAndView;
 
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.Buffer;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.Null;
+import javax.xml.transform.Result;
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
@@ -406,15 +409,15 @@ public class MainController {
 
 
     @RequestMapping(value = "task.html", produces="application/json;charset=UTF-8", method = RequestMethod.POST)
-    public @ResponseBody JSONObject create_task(HttpServletRequest request, @RequestBody String data) throws UnsupportedEncodingException, SQLException {
+    public @ResponseBody JSONObject create_task(HttpServletRequest request, @RequestBody String data) throws IOException, SQLException, InterruptedException {
         Connection conn=DBConnection.getConn();
         String user=Login.isLogin(request);
         JSONObject json=new JSONObject();
         if(user!=null) {
             String field = request.getParameter("field");
-            String files = JSONObject.parseObject(data).get("choose").toString().replace(',', '+');
             String task_type = JSONObject.parseObject(data).get("task").toString();
             String symbol;
+            String files="";
             String search_task=null;
             Statement stmt1 = conn.createStatement();
             if (Integer.parseInt(task_type) == 1) {
@@ -427,6 +430,11 @@ public class MainController {
                 symbol = "实体扩充";
                 search_task="select * from " + user + "_task where domain='" + field + "' and task_name like '" + symbol + "%' order by CAST(substring(task_name,5) AS SIGNED) desc limit 1";  //选最后一条数据
             }
+            if(symbol.equals("领域词抽取"))
+                files= JSONObject.parseObject(data).get("choose").toString().replace(',', '+');
+            else if(symbol.equals("基于百科的抽取") && JSONObject.parseObject(data).containsKey("choose_type"))
+                files= JSONObject.parseObject(data).get("choose_type").toString().replace(',', '+');
+
             ResultSet r1 = stmt1.executeQuery(search_task);
 
             int num = 1;    //任务编号
@@ -439,7 +447,7 @@ public class MainController {
                     num = Integer.parseInt(r1.getString("task_name").substring(4)) + 1;
                 }
             }
-            if(symbol.equals("基于百科的抽取")){
+            if(symbol.equals("基于百科的抽取") && !JSONObject.parseObject(data).containsKey("choose_type")){
                 String select_seed="select * from `field` where `uid`='"+user+"' and `domain`='"+field+"'";
                 r1=stmt1.executeQuery(select_seed);
                 r1.next();
@@ -448,7 +456,46 @@ public class MainController {
                     json.put("stat",1);
                     return json;
                 }
+
+                File seed_file = new File(SteveApplication.baikedir + field + "_seed_entity.txt");
+                if (!seed_file.exists()) {
+                    seed_file.createNewFile();
+                }
+                FileWriter fw = new FileWriter(seed_file);
+                Statement st = conn.createStatement();
+                ResultSet rs = st.executeQuery(select_seed);
+                rs.next();
+                String seeds = rs.getString("seed");
+                if (!seeds.equals("")) {
+                    seeds = seeds.trim();
+                    seeds = seeds.replace(' ', '\n');
+                    fw.write(seeds);
+                } else {
+                    String select_lib = "select `entity` from `" + user + "_" + field + "` order by `point` desc limit 50";
+                    rs = st.executeQuery(select_lib);
+                    while (rs.next()) {
+                        fw.write(rs.getString(1) + "\n");
+                    }
+                }
+                fw.close();
+                rs.close();
+                st.close();
+
+                Runtime.getRuntime().exec("sh /datamore/cc/knowledge/category.sh " + field + " " + user).waitFor();
+                FileReader fr=new FileReader("/datamore/cc/corpus/"+user+"/"+field+"/mission/"+field+"_seed_type.txt");
+                BufferedReader br=new BufferedReader(fr);
+                String line=null;
+                JSONArray array=new JSONArray();
+                while((line=br.readLine())!=null){
+                    JSONObject e=new JSONObject();
+                    String[] l=line.split("  ");
+                    e.put("type",l[0]);
+                    e.put("num",l[1]);
+                    array.add(e);
+                }
                 json.put("stat",2);
+                json.put("seed_type",array);
+                return json;
             }
             if(symbol.equals("实体扩充")){
                 String select_concept="select * from `"+user+"_"+field+"_concept`";
@@ -510,6 +557,8 @@ public class MainController {
         String user=Login.isLogin(request);
         model.addAttribute("iscookies",new ArrayList<>().add(request.getCookies()[0]));
         model.addAttribute("user_name",request.getCookies()[0].getName());
+        Thread t=new Thread(new ReadItems(request.getParameter("field"),request.getParameter("name"),user));    //把条目读进缓冲区
+        t.start();
         return "result-baike.html";
     }
 
@@ -580,34 +629,73 @@ public class MainController {
     @RequestMapping(value = "result.html", produces = {"text/html;charset=UTF-8;", "application/json;"}, method = RequestMethod.POST)
     public void saveEntityLib(HttpServletRequest request) throws SQLException {
         String user = Login.isLogin(request);
-        JSONObject json=SteveApplication.buffer.get(user);
-        JSONArray array=json.getJSONArray("items");
-        String field=json.getString("taskname").substring(0,json.getString("taskname").indexOf("_"));
+        String field=request.getParameter("field");
+        String name=request.getParameter("name");
+        int num=0;
+        String table_name=null;
+        if(name.charAt(0)=='领') {
+            num = Integer.parseInt(name.substring(5));
+            table_name=user+"_"+field+"_领_"+num;
+        }
+        else if(name.charAt(0)=='基') {
+            num = Integer.parseInt(name.substring(7));
+            table_name=user+"_"+field+"_基_"+num;
+        }
         Connection conn = DBConnection.getConn();
         if (!DBConnection.validateTableExist(user + "_" + field)) {
             String add_table = "create table " + user + "_" + field + "(" +
-                    "entity varchar(20) primary key," +
-                    "point double)";
+                    "entity varchar(50) primary key," +
+                    "point double,"+
+                    "isselected bit)";
             Statement st = conn.createStatement();
             st.execute(add_table);
         }
-        String add_lib = "insert ignore into `" + user + "_" + field + "` values(?,?)";
-        PreparedStatement ptmt = conn.prepareStatement(add_lib);
-        for (int i = 0; i < array.size(); i++) {
-            if(array.getJSONObject(i).getBooleanValue("isnew") && array.getJSONObject(i).getBooleanValue("selected")) {     //新的同时被选中
-                double point = array.getJSONObject(i).getDoubleValue("point");
-                String entity = array.getJSONObject(i).getString("entity");
-                try {
-                    ptmt.setString(1, entity);
-                    ptmt.setDouble(2, point);
-                    ptmt.executeUpdate();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        ptmt.close();
+        String add_lib = "insert ignore into `" + user + "_" + field + "` (`entity`,`point`,`isselected`) select entity,`point`,0 from "+table_name+" where isselected=1";
+        Statement st=conn.createStatement();
+        st.executeUpdate(add_lib);
+        st.execute("set SQL_SAFE_UPDATES=0");
+        st.executeUpdate("update "+table_name+" set isselected=0");
+        st.close();
         conn.close();
+    }
+
+    @RequestMapping(value="result-select",produces = "application/json; charset=UTF-8",method=RequestMethod.POST)
+    public @ResponseBody JSONObject result_select(HttpServletRequest request) throws SQLException {
+        String  user=Login.isLogin(request);
+        String field=request.getParameter("field");
+        String name=request.getParameter("name");
+        String entity=request.getParameter("entity");
+        String concept=request.getParameter("concept");
+        int selected=Integer.parseInt(request.getParameter("selected"));
+        String table_name=null;
+        String update=null;
+        if(name!=null && concept!=null){          //entity extraction
+            table_name=user+"_"+field+"_实_"+name.substring(4)+"_"+concept;
+            update="update "+table_name+" set isselected="+selected+" where entity='"+entity+"'";
+        }
+        else if(name==null && concept==null){             //field lib
+            table_name=user+"_"+field;
+            update="update "+table_name+" set isselected="+selected+" where entity='"+entity+"'";
+        }
+        else if(name==null && concept!=null){             //concept_lib
+            table_name=user+"_"+field+"_concept_lib";
+            update="update "+table_name+" set isselected="+selected+" where concept='"+concept+"' and entity='"+entity+"'";
+
+        }
+        else if(name.charAt(0)=='领' && name!=null) {     //field extraction
+            table_name = user + "_" + field + "_领_" + name.substring(5);
+            update="update "+table_name+" set isselected="+selected+" where entity='"+entity+"'";
+        }
+        else if(name.charAt(0)=='基' && name!=null) {       //baike extraction
+            table_name = user + "_" + field + "_基_" + name.substring(7);
+            update="update "+table_name+" set isselected="+selected+" where entity='"+entity+"'";
+        }
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
+        st.executeUpdate(update);
+        st.close();
+        conn.close();
+        return new JSONObject();
     }
 
     @RequestMapping(value = "getPage",produces = "application/json; charset=UTF-8",method = RequestMethod.POST)
@@ -615,216 +703,416 @@ public class MainController {
         String user=Login.isLogin(request);
         String field=request.getParameter("field");
         String name=request.getParameter("name");
+        String concept=request.getParameter("concept");
+        int page=Integer.parseInt(request.getParameter("page"));
         JSONObject json=JSONObject.parseObject(data);
         JSONArray array=json.getJSONArray("item");
-        int origin_page=Integer.parseInt(request.getParameter("origin"));
+        JSONObject filter=json.getJSONObject("filter");
         JSONObject result_json = new JSONObject();
-        JSONObject old_state=SteveApplication.buffer.get(user).getJSONObject("state");
-        JSONObject new_state=json.getJSONObject("state");
-        if(new_state.getString("filter").equals("按排序") && new_state.getDoubleValue("filter_num")<1)
-            new_state.put("filter_num",Integer.MAX_VALUE);
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
 
-        if(!SteveApplication.buffer.get(user).getBooleanValue("finish_load")) {         //还没加载完，直接从文件读
-            String result_file=null;
-            int target_page=Integer.parseInt(request.getParameter("page"));
-            String get_file_name="select `result` from `"+user+"_task` where `domain`=? and `task_name`=?";
-            Connection conn=DBConnection.getConn();
-            PreparedStatement ptmt=conn.prepareStatement(get_file_name);
-            ptmt.setString(1,field);
-            ptmt.setString(2,name);
-            ResultSet rs=ptmt.executeQuery();
-            rs.next();
-            result_file=rs.getString(1);
-            rs.close();
-            InputStreamReader isr=new InputStreamReader(new FileInputStream(result_file));
-            BufferedReader br=new BufferedReader(isr);
-            ArrayList<JSONObject> list=new ArrayList<>();
-            String line=null;
-            int count=0;
-            while((line=br.readLine())!=null){
-                if(count>=(target_page-1)*10 && count<target_page*10)  {
-                         String[] ss=line.split("\t");
-                         double point=Double.parseDouble(ss[0]);
-                         String entity=ss[1];
-                         JSONObject item=new JSONObject();
-                         item.put("point",point);
-                         item.put("entity",entity);
-                         String search="select * from `"+user+"_"+field+"` where entity='"+entity+"'";
-                         Statement st=conn.createStatement();
-                         ResultSet rs1=st.executeQuery(search);
-                         if(rs1.next()){
-                             item.put("isnew",false);
-                         }
-                         else{
-                             item.put("isnew",true);
-                         }
-                         st.close();
-                         rs1.close();
-                         item.put("selected",false);
-                         list.add(item);
-                }
-                count++;
-            }
-            result_json.put("item",list);
-            ptmt.close();
-            conn.close();
-        }  else {
-            JSONArray items = SteveApplication.buffer.get(user).getJSONArray("items");
-            int item_num = json.getInteger("item_num");
-
-
-            if (old_state.getString("new_or_all").equals("all")) {
-                //写回
-                for (int i = 0; i < array.size(); i++) {
-                    items.getJSONObject((origin_page - 1) * 10 + i).put("selected", array.getJSONObject(i).getBooleanValue("selected"));
-                }
-            } else {           //旧状态显示新词
-                //写回策略
-                int i = 0, j = 0;
-                while (j < array.size()) {
-                    while (i < items.size() && !items.getJSONObject(i).getString("entity").equals(array.getJSONObject(j).getString("entity"))) {
-                        i++;
-                    }
-                    items.getJSONObject(i).put("selected", array.getJSONObject(j).getBooleanValue("selected"));
-                    j++;
-                }
-            }
-
-            int count = 0;        //本页又几条
-            int total_count = 0;  //符合条件的一共有几条
-            int target_page = Integer.parseInt(request.getParameter("page"));
-            ArrayList<JSONObject> list = new ArrayList<>();
-            int index = 0;
-            while (count < 10 && (target_page - 1) * 10 + count < item_num && index < items.size()) {
-                if (new_state.getString("new_or_all").equals("new") && items.getJSONObject(index).getBooleanValue("isnew")
-                        || new_state.getString("new_or_all").equals("all")) {
-                    total_count++;
-                    if (total_count > (target_page - 1) * 10) {
-
-                        if (new_state.getString("filter").equals("全选")) {
-                            list.add(items.getJSONObject(index));
-                            count++;
-                        } else if (new_state.getString("filter").equals("按分数") &&
-                                new_state.getDouble("filter_num") <= items.getJSONObject((target_page - 1) * 10 + count).getDouble("point")) {
-                            list.add(items.getJSONObject(index));
-                            count++;
-                        } else if (new_state.getString("filter").equals("按排序") &&
-                                new_state.getIntValue("filter_num") > (target_page - 1) * 10 + count) {
-                            list.add(items.getJSONObject(index));
-                            count++;
-                        }
-                    }
-                }
-                index++;
-            }
-
-            result_json.put("item", list);
-            SteveApplication.buffer.get(user).put("state", json.get("state"));       //更新筛选策略
+        String table_name=null;
+        String join_table=null;
+        int num=0;
+        if(name.startsWith("领")){
+            num=Integer.parseInt(name.substring(5));
+            table_name=user+"_"+field+"_领_"+num;
+            join_table=user+"_"+field;
+        }
+        else if(name.startsWith("基")){
+            num=Integer.parseInt(name.substring(7));
+            table_name=user+"_"+field+"_基_"+num;
+            join_table=user+"_"+field;
+        }
+        else{
+            table_name=user+"_"+field+"_实_"+name.substring(4)+"_"+concept;
+            join_table=user+"_"+field+"_concept_lib";
         }
 
+
+        //select
+        String select=null;
+        if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(join_table)){
+            if(Double.parseDouble(filter.getString("num"))<0){
+                select="select * from "+table_name+" order by point desc limit "+(page-1)*10+",10";
+            }
+            else if(filter.getString("rankorpoint").equals("point")){
+                double point=Double.parseDouble(filter.getString("num"));
+                select="select * from "+table_name+" where point>"+point+" order by point desc limit "+(page-1)*10+",10";
+            }
+            else if(filter.getString("rankorpoint").equals("rank")){
+                int rank=(int)Math.floor(Double.parseDouble(filter.getString("num")));
+                select="select * from "+table_name +" order by point desc limit "+(page-1)*10+","+((page*10)<=rank?10:rank%10);
+            }
+        }
+        else{
+            if(Double.parseDouble(filter.getString("num"))<0){
+                if(name.startsWith("实"))
+                    select="select * from "+table_name+" left join (select * from "+join_table+" where concept='"+concept+"') as t1 on "+table_name+".entity=t1.entity where t1.entity is null order by "+table_name+".point desc limit "+(page-1)*10+",10";
+                else select="select * from "+table_name+" left join "+join_table+" on "+table_name+".entity="+join_table+".entity where "+join_table+".entity is null order by "+table_name+".point desc limit "+(page-1)*10+",10";
+            }
+            else if(filter.getString("rankorpoint").equals("point")){
+                double point=Double.parseDouble(filter.getString("num"));
+                if(name.startsWith("实"))
+                    select="select * from "+table_name+" left join (select * from "+join_table+" where concept='"+concept+"') as t1 on "+table_name+".entity=t1.entity where t1.entity is null and "+table_name+".point>"+point+" order by "+table_name+".point desc limit "+(page-1)*10+",10";
+                else select="select * from "+table_name+" left join "+join_table+" on "+table_name+".entity="+join_table+".entity where "+join_table+".entity is null and "+table_name+".point>"+point+" order by "+table_name+".point desc limit "+(page-1)*10+",10";
+
+            }
+            else if(filter.getString("rankorpoint").equals("rank")){
+                int rank=(int)Math.floor(Double.parseDouble(filter.getString("num")));
+                if(name.startsWith("实"))
+                    select="select * from "+table_name+" left join (select * from "+join_table+" where concept='"+concept+"') as t1 on "+table_name+".entity=t1.entity where t1.entity is null order by "+table_name+".point desc limit "+(page-1)*10+","+((page*10)<=rank?10:rank%10);
+                else select="select * from "+table_name+" left join "+join_table+" on "+table_name+".entity="+join_table+".entity where "+join_table+".entity is null order by "+table_name+".point desc limit "+(page-1)*10+","+((page*10)<=rank?10:rank%10);
+            }
+        }
+        System.out.println(select);
+        ResultSet rs=st.executeQuery(select);
+        JSONArray a=new JSONArray();
+        boolean flag;
+        if(filter.getString("neworall").equals("new"))
+            flag=true;
+        else if(name.startsWith("实") && !DBConnection.validateTableExist(user+"_"+field+"_concept_lib"))
+            flag=true;
+        else if((name.startsWith("领") || name.startsWith("基")) && !DBConnection.validateTableExist(user+"_"+field))
+            flag=true;
+        else flag=false;
+        while(rs.next()){
+            JSONObject json_temp=new JSONObject();
+            json_temp.put("entity",rs.getString(table_name+".entity"));
+            json_temp.put("point",rs.getDouble(table_name+".point"));
+            json_temp.put("selected",rs.getInt("isselected"));
+            if(flag==true)
+                json_temp.put("isnew",true);
+            else{
+                String search=null;
+                if(name.startsWith("领") || name.startsWith("基"))
+                    search="select count(*) from "+user+"_"+field+" where entity='"+rs.getString(table_name+".entity")+"'";
+                else search="select count(*) from "+user+"_"+field+"_concept_lib"+" where concept='"+concept+"' and entity='"+rs.getString(table_name+".entity")+"'";
+
+                ResultSet r=conn.createStatement().executeQuery(search);
+                r.next();
+                if(r.getInt("count(*)")>0)
+                    json_temp.put("isnew",false);
+                else json_temp.put("isnew",true);
+                r.close();
+            }
+            a.add(json_temp);
+        }
+        rs.close();
+        st.close();
+        conn.close();
+        result_json.put("item",a);
         return result_json;
     }
 
-    @RequestMapping(value="getItemNum",produces = "application/json; charset=UTF-8",method = RequestMethod.POST)
-    public @ResponseBody JSONObject getItemNum(HttpServletRequest request,@RequestBody String data) throws SQLException {
+    @RequestMapping(value="getPageNum",produces = "application/json; charset=UTF-8",method = RequestMethod.POST)
+    public @ResponseBody JSONObject getPageNum(HttpServletRequest request,@RequestBody String data) throws SQLException {
         String user=Login.isLogin(request);
-        JSONObject state=JSONObject.parseObject(data);
+        String field=request.getParameter("field");
+        if(JSONObject.parseObject(data).isEmpty()) {     //fieldlib
+            String table_name=user+"_"+field;
+            Connection c=DBConnection.getConn();
+            Statement statement=c.createStatement();
+            ResultSet resultSet=statement.executeQuery("select count(*) from "+table_name);
+            resultSet.next();
+            int page_num=resultSet.getInt("count(*)");
+            page_num=page_num%10==0?page_num/10:page_num/10+1;
+            resultSet.close();
+            statement.close();
+            c.close();
+            JSONObject result=new JSONObject();
+            result.put("page_num",page_num);
+            return result;
+        }
+        String name=request.getParameter("name");
+        int num=0;
+        if(name.charAt(0)=='领')
+            num=Integer.parseInt(name.substring(5));
+        else if(name.charAt(0)=='基')
+            num=Integer.parseInt(name.substring(7));
+        String table_name=user+"_"+field+"_"+name.charAt(0)+"_"+num;
+        JSONObject filter=JSONObject.parseObject(data);
         JSONObject result=new JSONObject();
         JSONArray array=null;
-        while(!SteveApplication.buffer.get(user).getBooleanValue("finish_load")) {
-            try {
-                Thread.sleep(1000);
-            } catch (Exception e){
-                e.printStackTrace();
-            }
-        }
-        array = SteveApplication.buffer.get(user).getJSONArray("items");
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
+        int page_num=0;
+        String select=null;
+        ResultSet rs;
 
-        if(state.getString("new_or_all").equals("all")){
-            if(state.getString("filter").equals("全选")){
-                result.put("item_num",array.size());
+        if(filter.getString("rankorpoint").equals("all") ||filter.getDouble("num")<=0){
+            if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(user+"_"+field)){
+                select="select count(*) from "+table_name;
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=rs.getInt("count(*)")%10==0?rs.getInt("count(*)")/10:rs.getInt("count(*)")/10+1;
             }
-            else if(state.getString("filter").equals("按分数")){
-                int i;
-                for(i=0;i<array.size();i++){
-                    if(state.getDouble("filter_num")>array.getJSONObject(i).getDouble("point"))
-                        break;
-                }
-                result.put("item_num",i);
-            }
-            else{           //按排序
-                result.put("item_num",Math.min(state.getIntValue("filter_num"),array.size()));
+            else {
+                select="select count(*) from "+table_name+" left join "+user+"_"+field +" on "+table_name+".entity="+user+"_"+field+".entity where "+user+"_"+field+".entity is null";
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=rs.getInt("count(*)")%10==0?rs.getInt("count(*)")/10:rs.getInt("count(*)")/10+1;
             }
         }
-        else{       //显示新词
-            if(state.getString("filter").equals("全选")){
-                int count=0;
-                for(int i=0;i<array.size();i++){
-                    if(array.getJSONObject(i).getBooleanValue("isnew"))
-                        count++;
-                }
-                result.put("item_num",count);
+        else if(filter.getString("rankorpoint").equals("rank")){
+            int rank=(int)Math.floor(filter.getInteger("num"));
+            if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(user+"_"+field)){
+                select="select count(*) from "+table_name;
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=Math.min(rs.getInt("count(*)"),rank);
+                page_num=page_num%10==0?page_num/10:page_num/10+1;
             }
-            else if(state.getString("filter").equals("按分数")){
-                int count=0;
-                for(int i=0;i<array.size();i++){
-                    if(array.getJSONObject(i).getBooleanValue("isnew")){
-                        if(state.getDouble("filter_num")>array.getJSONObject(i).getDouble("point")){
-                            break;
-                        }
-                        else count++;
-                    }
-                }
-                result.put("item_num",count);
-            }
-            else{           //按排序
-                int count=0;
-                for(int i=0;i<array.size();i++){
-                    if(array.getJSONObject(i).getBooleanValue("isnew")){
-                        count++;
-                        if(count>=state.getIntValue("filter_num"))
-                            break;
-                    }
-                }
-                result.put("item_num",count);
+            else{
+                select="select count(*) from "+table_name+" left join "+user+"_"+field +" on "+table_name+".entity="+user+"_"+field+".entity where "+user+"_"+field+".entity is null";
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=Math.min(rs.getInt("count(*)"),rank);
+                page_num=page_num%10==0?page_num/10:page_num/10+1;
             }
         }
+        else{
+            double point=filter.getDouble("num");
+            if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(user+"_"+field)){
+                select="select count(*) from "+table_name+" where point>"+point;
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=rs.getInt("count(*)")%10==0?rs.getInt("count(*)")/10:rs.getInt("count(*)")/10+1;
+            }
+            else{
+                select="select count(*) from "+table_name+" left join "+user+"_"+field +" on "+table_name+".entity="+user+"_"+field+".entity where "+table_name+".point>"+point+" and "+user+"_"+field+".entity is null";
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=rs.getInt("count(*)")%10==0?rs.getInt("count(*)")/10:rs.getInt("count(*)")/10+1;
+            }
+        }
+        result.put("page_num",page_num);
         return result;
     }
 
-    @RequestMapping(value = "select_table",produces = "application/json; charset=UTF-8",method = RequestMethod.POST)
+    @RequestMapping(value="getConceptPageNum",produces="application/json; charset=UTF-8",method=RequestMethod.POST)
+    public @ResponseBody JSONObject getConceptPageNum(HttpServletRequest request,@RequestBody String data) throws SQLException {
+        String user=Login.isLogin(request);
+        String field=request.getParameter("field");
+        String name=request.getParameter("name");
+        String concept=request.getParameter("concept");
+        String select=null;
+        int page_num;
+
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
+        ResultSet rs=null;
+
+        if(name==null){             //concept_lib
+            rs=st.executeQuery("select count(*) from "+user+"_"+field+"_concept_lib where concept='"+concept+"'");
+            rs.next();
+            page_num=rs.getInt("count(*)");
+            page_num=page_num%10==0?page_num/10:page_num/10+1;
+            JSONObject result=new JSONObject();
+            result.put("page_num",page_num);
+            return result;
+        }
+
+        String table_name=user+"_"+field+"_实_"+Integer.parseInt(name.substring(4))+"_"+concept;
+        JSONObject filter=JSONObject.parseObject(data);
+
+
+
+        if(filter.getString("rankorpoint").equals("all") ||filter.getDouble("num")<=0){
+            if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(user+"_"+field+"_concept_lib")){
+                select="select count(*) from "+table_name;
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=rs.getInt("count(*)")%10==0?rs.getInt("count(*)")/10:rs.getInt("count(*)")/10+1;
+            }
+            else {
+                select="select count(*) from "+table_name+" left join (select entity from "+user+"_"+field +"_concept_lib where concept='"+concept+"') as t1 on "+table_name+".entity=t1.entity where t1.entity is null";
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=rs.getInt("count(*)")%10==0?rs.getInt("count(*)")/10:rs.getInt("count(*)")/10+1;
+            }
+        }
+        else if(filter.getString("rankorpoint").equals("rank")){
+            int rank=(int)Math.floor(filter.getInteger("num"));
+            if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(user+"_"+field+"_concept_lib")){
+                select="select count(*) from "+table_name;
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=Math.min(rs.getInt("count(*)"),rank);
+                page_num=page_num%10==0?page_num/10:page_num/10+1;
+            }
+            else{
+                select="select count(*) from "+table_name+" left join (select entity from "+user+"_"+field +"_concept_lib where concept='"+concept+"') as t1 on "+table_name+".entity=t1.entity where t1.entity is null";
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=Math.min(rs.getInt("count(*)"),rank);
+                page_num=page_num%10==0?page_num/10:page_num/10+1;
+            }
+        }
+        else{
+            double point=filter.getDouble("num");
+            if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(user+"_"+field+"_concept_lib")){
+                select="select count(*) from "+table_name+" where point>"+point;
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=rs.getInt("count(*)")%10==0?rs.getInt("count(*)")/10:rs.getInt("count(*)")/10+1;
+            }
+            else{
+                select="select count(*) from "+table_name+" left join (select entity from "+user+"_"+field +"_concept_lib where concept='"+concept+"') as t1 on "+table_name+".entity=t1.entity where "+table_name+".point>"+point+" and t1.entity is null";
+                rs=st.executeQuery(select);
+                rs.next();
+                page_num=rs.getInt("count(*)")%10==0?rs.getInt("count(*)")/10:rs.getInt("count(*)")/10+1;
+            }
+        }
+        JSONObject result=new JSONObject();
+        result.put("page_num",page_num);
+        return result;
+    }
+
+    @RequestMapping(value = "select_filtered",produces = "application/json; charset=UTF-8",method = RequestMethod.POST)
+    public @ResponseBody JSONObject select_filtered(HttpServletRequest request,@RequestBody String data) throws SQLException {
+        String user=Login.isLogin(request);
+        String field=request.getParameter("field");
+        String name=request.getParameter("name");
+        String concept=request.getParameter("concept");
+        JSONObject filter=JSONObject.parseObject(data);
+        String update_sql=null;
+        String table_name=null;
+        String lib_name=null;
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
+        if(name.charAt(0)=='领') {
+            table_name = user + "_" + field + "_领_" + name.substring(5);
+            lib_name=user+"_"+field;
+        }
+        else if(name.charAt(0)=='基') {
+            table_name = user + "_" + field + "_基_" + name.substring(7);
+            lib_name=user+"_"+field;
+        }
+        else {
+            table_name=user+"_"+field+"_实_"+name.substring(4)+"_"+concept;
+            lib_name=user+"_"+field+"_concept_lib";
+        }
+
+
+        if(Double.parseDouble(filter.getString("num"))<0){
+            if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(lib_name)){
+                update_sql="update "+table_name+" set isselected="+request.getParameter("flag");
+            }
+            else{
+                if(name.charAt(0)=='实')
+                    update_sql="update "+table_name+" set isselected="+request.getParameter("flag")+" where "+
+                            table_name+".entity in (select entity from (select "+table_name+".entity from "+
+                            table_name+" left join (select entity from "+user+"_"+field+"_concept_lib where concept='"+concept+"') as t1 on "+
+                            table_name+".entity=t1.entity where t1.entity is null) t2)";
+                else update_sql="update "+table_name+" set isselected="+request.getParameter("flag")+" where "+
+                        table_name+".entity in (select entity from (select "+table_name+".entity from "+
+                        table_name+" left join "+user+"_"+field+" on "+table_name+".entity="+user+"_"+field+".entity where "+
+                        user+"_"+field+".entity is null) t1)";
+            }
+        }
+        else if(filter.getString("rankorpoint").equals("rank")){
+            int num=(int)Math.floor(Double.parseDouble(filter.getString("num")));
+            if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(lib_name)){
+                update_sql="update "+table_name+" set isselected="+request.getParameter("flag")+" order by point desc limit "+num;
+            }
+            else{
+                if(name.charAt(0)=='实')
+                    update_sql="update "+table_name+" set isselected="+request.getParameter("flag")+" where "+
+                        table_name+".entity in (select entity from (select "+table_name+".entity from "+
+                        table_name+" left join (select entity from "+user+"_"+field+"_concept_lib where concept='"+concept+"') as t1 on "+
+                        table_name+".entity=t1.entity where t1.entity is null order by "+table_name+".point desc limit "+num+") t2)";
+                else update_sql="update "+table_name+" set isselected="+request.getParameter("flag")+" where "+
+                        table_name+".entity in (select entity from (select "+table_name+".entity from "+
+                        table_name+" left join "+user+"_"+field+" on "+table_name+".entity="+user+"_"+field+".entity where "+
+                        user+"_"+field+".entity is null order by "+table_name+".point desc limit "+num+") t1)";
+            }
+        }
+        else if(filter.getString("rankorpoint").equals("point")){
+            double num=Double.parseDouble(filter.getString("num"));
+            if(filter.getString("neworall").equals("all") || !DBConnection.validateTableExist(lib_name)){
+                update_sql="update "+table_name+" set isselected="+request.getParameter("flag")+" where point>"+num+" order by point";
+            }
+            else{
+                if(name.charAt(0)=='实')
+                    update_sql="update "+table_name+" set isselected="+request.getParameter("flag")+" where "+
+                        table_name+".entity in (select * from (select "+table_name+".entity from "+
+                        table_name+" left join (select entity from "+user+"_"+field+"_concept_lib where concept='"+concept+"')as t1 on "+
+                        table_name+".entity=t1.entity where t1.entity is null and "+table_name+".point>"+num+") t2)";
+                else update_sql="update "+table_name+" set isselected="+request.getParameter("flag")+" where "+
+                        table_name+".entity in (select entity from (select "+table_name+".entity from "+
+                        table_name+" left join "+user+"_"+field+" on "+table_name+".entity="+user+"_"+field+".entity where "+
+                        user+"_"+field+".entity is null and "+table_name+".point>"+num+" order by "+table_name+".point desc) t1)";
+            }
+        }
+        System.out.println(update_sql);
+        st.execute("set SQL_SAFE_UPDATES=0");
+        st.executeUpdate(update_sql);
+        return new JSONObject();
+    }
+
+    @RequestMapping(value="select_table",method=RequestMethod.POST)
     public @ResponseBody JSONObject select_table(HttpServletRequest request) throws SQLException {
         String user=Login.isLogin(request);
-        int length=Integer.parseInt(request.getParameter("total_length"));
+        String field=request.getParameter("field");
+        String name=request.getParameter("name");
         int flag=Integer.parseInt(request.getParameter("flag"));
-        JSONArray array=SteveApplication.buffer.get(user).getJSONArray("items");
-        if(SteveApplication.buffer.get(user).getJSONObject("state").getString("new_or_all").equals("all")) {      //显示所有词
-            for (int i = 0; i < length; i++) {
-                array.getJSONObject(i).put("selected", flag == 1 ? true:false);
-            }
+        String table_name=null;
+
+        String num=null;
+        if(name.startsWith("领")) {
+            table_name="_领_";
+            num = name.substring(5);
         }
-        else{                                         //显示新词
-            int count=0;
-            for(int i=0;i<array.size();i++){
-                if(array.getJSONObject(i).getBooleanValue("isnew")){
-                    array.getJSONObject(i).put("selected", flag == 1 ? true:false);
-                    count++;
-                    if(count>=length)
-                        break;
-                }
-            }
+        else if(name.startsWith("基")) {
+            table_name="_基_";
+            num = name.substring(7);
         }
-        JSONObject result_json=new JSONObject();
-        return result_json;
+        else {
+            table_name="_实_";
+            num=name.substring(4);
+        }
+
+        table_name=user+"_"+field+table_name+num;
+
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
+
+        if(name.startsWith("实")) {
+            String table;
+            ResultSet rs=st.executeQuery("select concept_word from "+user+"_"+field+"_concept");
+            Statement statement=conn.createStatement();
+            statement.execute("set SQL_SAFE_UPDATES=0");
+            while(rs.next()){
+                String c=rs.getString("concept_word");
+                table=table_name + "_" + c;
+                statement.executeUpdate("update "+table+" set isselected="+flag);
+            }
+            statement.close();
+            rs.close();
+        }
+        else{
+            st.execute("set SQL_SAFE_UPDATES=0");
+            st.executeUpdate("update "+table_name+" set isselected="+flag);
+        }
+        st.close();
+        conn.close();
+
+        return new JSONObject();
     }
 
     @RequestMapping(value = "fieldlib.html", method = RequestMethod.GET)
     public String fieldlib(HttpServletRequest request, Model model) throws SQLException {
-        if (Login.isLogin(request) == null) {
+        String user=Login.isLogin(request);
+        if (user == null) {
             return "redirect:login.html";
         }
         model.addAttribute("iscookies", new ArrayList<>().add(request.getCookies()[0]));
         model.addAttribute("user_name", request.getCookies()[0].getName());
+        String field=request.getParameter("field");
+        if(!DBConnection.validateTableExist(user+"_"+field))
+            return "index.html";
         return "fieldlib.html";
     }
 
@@ -847,6 +1135,71 @@ public class MainController {
         st.close();
         conn.close();
         return jsonObject;
+    }
+
+    @RequestMapping(value = "getFieldLibPage",produces = "application/json; charset=UTF-8",method = RequestMethod.POST)
+    public @ResponseBody JSONObject fieldLibPage(HttpServletRequest request,@RequestBody String data) throws SQLException, IOException {
+        String user=Login.isLogin(request);
+        String field=request.getParameter("field");
+        int page=Integer.parseInt(request.getParameter("page"));
+        JSONObject json=JSONObject.parseObject(data);
+        JSONArray array=json.getJSONArray("item");
+        JSONObject result_json = new JSONObject();
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
+        String table_name=user+"_"+field;
+        String update=null;
+        st.execute("set SQL_SAFE_UPDATES=0");
+        for(int i=0;i<array.size();i++){
+            update="update "+table_name+" set isselected="+array.getJSONObject(i).getString("selected")+" where entity='"+array.getJSONObject(i).getString("entity")+"'";
+            st.executeUpdate(update);
+        }
+
+        //select
+        String select="select * from "+table_name+" order by ascii(entity) limit "+(page-1)*10+",10";
+        ResultSet rs=st.executeQuery(select);
+        JSONArray a=new JSONArray();
+        while(rs.next()){
+            JSONObject json_temp=new JSONObject();
+            json_temp.put("entity",rs.getString(table_name+".entity"));
+            json_temp.put("selected",rs.getInt("isselected"));
+            a.add(json_temp);
+        }
+        rs.close();
+        st.close();
+        conn.close();
+        result_json.put("item",a);
+        return result_json;
+    }
+
+    @RequestMapping(value = "getConceptLibPage",produces = "application/json; charset=UTF-8",method = RequestMethod.POST)
+    public @ResponseBody JSONObject getConceptLibPage(HttpServletRequest request,@RequestBody String data) throws SQLException {
+        String user=Login.isLogin(request);
+        String concept=request.getParameter("concept");
+        String field=request.getParameter("field");
+        int page=Integer.parseInt(request.getParameter("page"));
+
+        JSONObject items=JSONObject.parseObject(data);
+        JSONArray item_array=items.getJSONArray("item");
+        JSONObject result=new JSONObject();
+        JSONArray array=new JSONArray();
+        Connection conn=DBConnection.getConn();
+        Statement st=conn.createStatement();
+        st.execute("set SQL_SAFE_UPDATES=0");
+
+        String select="select * from "+user+"_"+field+"_concept_lib where concept='"+concept+"' order by ascii(entity) limit "+(page-1)*10+",10";
+        ResultSet rs=st.executeQuery(select);
+        while(rs.next()){
+            JSONObject json=new JSONObject();
+            json.put("entity",rs.getString("entity"));
+            json.put("selected",rs.getString("isselected"));
+            array.add(json);
+        }
+        result.put("item",array);
+        rs.close();
+        st.close();
+        conn.close();
+        return result;
     }
 
     @RequestMapping(value="clearlib",produces="application/json;charset=UTF-8",method=RequestMethod.GET)
@@ -874,20 +1227,14 @@ public class MainController {
     }
 
     @RequestMapping(value="clear_selected",produces="application/json;charset=UTF-8",method=RequestMethod.POST)
-    public @ResponseBody JSONObject clearSelected(HttpServletRequest request,@RequestBody String data) throws SQLException{
+    public @ResponseBody JSONObject clearSelected(HttpServletRequest request) throws SQLException{
         String user = Login.isLogin(request);
         String field = request.getParameter("field");
-        JSONObject JSON=JSONObject.parseObject(data);
-        JSONArray array=JSON.getJSONArray("item");
         Connection conn = DBConnection.getConn();
         try {
             Statement st = conn.createStatement();
             st.execute("SET SQL_SAFE_UPDATES=0");
-            for(int i=0;i<array.size();i++){
-                if(array.getJSONObject(i).getBooleanValue("selected")){
-                    st.execute("delete from `" + user + "_" + field + "` where entity='"+array.getJSONObject(i).getString("entity")+"'");
-                }
-            }
+            st.executeUpdate("delete from "+user+"_"+field+" where isselected=1");
             st.close();
             conn.close();
             JSONObject json=new JSONObject();
@@ -904,41 +1251,15 @@ public class MainController {
     }
 
     @RequestMapping(value="clear_selected_entity",produces="application/json;charset=UTF-8",method=RequestMethod.POST)
-    public @ResponseBody JSONObject clearSelectedEntity(HttpServletRequest request,@RequestBody String data) throws SQLException{
+    public @ResponseBody JSONObject clearSelectedEntity(HttpServletRequest request) throws SQLException{
         String user = Login.isLogin(request);
         String field = request.getParameter("field");
-        JSONObject JSON=JSONObject.parseObject(data);
-        Iterator<String> it=JSON.keySet().iterator();
         Connection conn = DBConnection.getConn();
         Statement st = conn.createStatement();
         st.execute("SET SQL_SAFE_UPDATES=0");
-        st.close();
-        String sql="delete from `"+user+"_"+field+"_concept_lib` where concept=? and entity=?";
-        PreparedStatement ptmt=conn.prepareStatement(sql);
-        try {
-            while(it.hasNext()){
-                String concept=(String)it.next();
-                JSONArray array=JSON.getJSONArray(concept);
-                for(int i=0;i<array.size();i++){
-                    String entity=array.getJSONObject(i).getString("entity");
-                    ptmt.setString(1,concept);
-                    ptmt.setString(2,entity);
-                    ptmt.executeUpdate();
-                }
-            }
-            ptmt.close();
-
-            conn.close();
-            JSONObject json=new JSONObject();
-            json.put("statu",1);
-            return json;
-        } catch(Exception e){
-            e.printStackTrace();
-            conn.close();
-            JSONObject json=new JSONObject();
-            json.put("statu",0);
-            return json;
-        }
+        String sql="delete from `"+user+"_"+field+"_concept_lib` where isselected=1";
+        st.executeUpdate(sql);
+        return new JSONObject();
 
     }
 
@@ -1017,6 +1338,22 @@ public class MainController {
         return "result-entity.html";
     }
 
+    @RequestMapping(value="get_concepts",produces="application/json; charset=UTF-8",method = RequestMethod.GET)
+    public @ResponseBody JSONObject get_concept_num(HttpServletRequest request) throws SQLException {
+        String user=Login.isLogin(request);
+        String field=request.getParameter("field");
+        Connection conn=DBConnection.getConn();
+        List<String> list=new ArrayList<>();
+        Statement st=conn.createStatement();
+        ResultSet rs=st.executeQuery("select concept_word from "+user+"_"+field+"_concept");
+        while(rs.next()){
+            list.add(rs.getString("concept_word"));
+        }
+        JSONObject result=new JSONObject();
+        result.put("concepts",list);
+        return result;
+    }
+
     @RequestMapping(value = "result-data-entity",produces = "application/json; charset=UTF-8",method = RequestMethod.POST)
     public @ResponseBody JSONObject result_data_entity(HttpServletRequest request) throws SQLException, IOException {
         String user=Login.isLogin(request);
@@ -1079,10 +1416,10 @@ public class MainController {
     }
 
     @RequestMapping(value="result-entity.html",produces="application/json;charset=UTF-8", method = RequestMethod.POST)
-    public @ResponseBody JSONObject saveConceptLib(HttpServletRequest request,@RequestBody String data) throws SQLException{
+    public @ResponseBody JSONObject saveConceptLib(HttpServletRequest request) throws SQLException{
         String user=Login.isLogin(request);
         String field=request.getParameter("field");
-        String task_name=request.getParameter("name");
+        String name=request.getParameter("name");
         JSONObject json=new JSONObject();
         if(user==null){
             json.put("statu",0);
@@ -1092,32 +1429,29 @@ public class MainController {
         Connection conn = DBConnection.getConn();
         if (!DBConnection.validateTableExist(user + "_" +field+"_concept_lib")) {
             String add_table = "create table " + user + "_" + request.getParameter("field")+"_concept_lib" + "(" +
-                    "concept varchar(20)," +
-                    "entity varchar(20)," +
+                    "concept varchar(50)," +
+                    "entity varchar(50)," +
                     "point double,"+
+                    "isselected bit,"+
                     "primary key(concept,entity))";
             Statement st = conn.createStatement();
             st.execute(add_table);
         }
-        String add_lib = "insert ignore into `" + user + "_" + request.getParameter("field") + "_concept_lib` values(?,?,?)";
-        PreparedStatement ptmt = conn.prepareStatement(add_lib);
-        JSONObject result=JSONObject.parseObject(data);
-        JSONArray array = result.getJSONArray("item");
-        for (int i = 0; i < array.size(); i++) {
-            String concept=array.getJSONObject(i).getString("concept");
-            String pointstr = array.getJSONObject(i).getString("point");
-            double point = Double.parseDouble(pointstr);
-            String entity = array.getJSONObject(i).getString("entity");
-            try {
-                ptmt.setString(1, concept);
-                ptmt.setString(2, entity);
-                ptmt.setDouble(3, point);
-                ptmt.executeUpdate();
-            } catch (Exception e){
-                e.printStackTrace();
-            }
+
+        String add_lib = null;
+        String update=null;
+        Statement st=conn.createStatement();
+        String select_concepts="select concept_word from "+user+"_"+field+"_concept";
+        ResultSet rs=st.executeQuery(select_concepts);
+        while(rs.next()){
+            String concept=rs.getString("concept_word");
+            Statement s=conn.createStatement();
+            add_lib="insert ignore into "+user+"_"+field+"_concept_lib (`concept`,`entity`,`point`,`isselected`) select '"+concept+"',entity,`point`,0 from "+user+"_"+field+"_实_"+name.substring(4)+"_"+concept+" where isselected=1";
+            s.executeUpdate(add_lib);
+            s.execute("set SQL_SAFE_UPDATES=0");
+            s.executeUpdate("update "+user+"_"+field+"_实_"+name.substring(4)+"_"+concept+" set isselected=0");
+            s.close();
         }
-        ptmt.close();
         conn.close();
         return json;
     }
@@ -1135,6 +1469,9 @@ public class MainController {
         InputStreamReader isr=new InputStreamReader(new FileInputStream(file_name));
         BufferedReader br=new BufferedReader(isr);
         String line=null;
+        boolean flag=false;
+        if(!DBConnection.validateTableExist(user+"_"+field+"_concept_lib"))
+            flag=true;
         while((line=br.readLine())!=null) {
             JSONObject item_json = new JSONObject();
             line = line.trim();
@@ -1146,11 +1483,15 @@ public class MainController {
             item_json.put("entity", entity);
             item_json.put("selected", false);
             Statement st1 = conn.createStatement();
-            ResultSet r = st1.executeQuery("select * from `" + user + "_" + field + "_concept_lib` where concept='" + concept + "' and entity='" + entity + "'");
-            if (r.next()) {
-                item_json.put("isnew", false);
-            } else item_json.put("isnew", true);
-            r.close();
+            if(flag)
+                item_json.put("isnew",true);
+            else {
+                ResultSet r = st1.executeQuery("select * from `" + user + "_" + field + "_concept_lib` where concept='" + concept + "' and entity='" + entity + "'");
+                if (r.next()) {
+                    item_json.put("isnew", false);
+                } else item_json.put("isnew", true);
+                r.close();
+            }
             st1.close();
             array.add(item_json);
         }
@@ -1163,11 +1504,14 @@ public class MainController {
     @RequestMapping(value="conceptlib.html",method = RequestMethod.GET)
     public String conceptlib(HttpServletRequest request,Model model) throws SQLException{
         String user=Login.isLogin(request);
+        String field=request.getParameter("field");
         if(user==null){
             return "login.html";
         }
         model.addAttribute("iscookies", new ArrayList<>().add(request.getCookies()[0]));
         model.addAttribute("user_name",request.getCookies()[0].getName());
+        if(!DBConnection.validateTableExist(user+"_"+field+"_concept_lib"))
+            return "index.html";
         return "conceptlib.html";
     }
 
@@ -1211,7 +1555,7 @@ public class MainController {
         }
         String field=request.getParameter("field");
         String concept=request.getParameter("concept");
-        File concept_lib=new File(SteveApplication.rootdir+"/"+user+"/"+field+"/"+concept+"_概念.txt");
+        File concept_lib=new File(SteveApplication.rootdir+"/"+user+"/"+field+"/"+field+"_"+concept+"_概念.txt");
         if(!concept_lib.exists()){
             concept_lib.createNewFile();
         }
@@ -1286,6 +1630,28 @@ public class MainController {
             if(!rs.next()){
                 st.execute("DROP table `"+user+"_"+field+"_concept_lib`");
             }
+            st.close();
+            conn.close();
+            json.put("statu",1);
+            return json;
+        } catch(SQLException e){
+            e.printStackTrace();
+            json.put("statu",0);
+            return json;
+        }
+    }
+
+    @RequestMapping(value="clear_concept_lib_total",produces = "application/json;charset=UTF-8",method = RequestMethod.GET)
+    public @ResponseBody JSONObject clear_concept_lib_total(HttpServletRequest request){
+        Connection conn=DBConnection.getConn();
+        JSONObject json=new JSONObject();
+        try {
+            String user=Login.isLogin(request);
+            String field=request.getParameter("field");
+            String concept=request.getParameter("concept");
+            Statement st = conn.createStatement();
+            st.execute("SET SQL_SAFE_UPDATES=0");
+            st.execute("DROP table `"+user+"_"+field+"_concept_lib`");
             st.close();
             conn.close();
             json.put("statu",1);

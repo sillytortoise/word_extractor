@@ -1,6 +1,6 @@
-var items;
+var items={};
 var target_page;        //当前在哪页
-var item_num;           //可以显示多少条
+var page_num;
 
 function GetQueryString(name) {
     var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
@@ -33,7 +33,6 @@ function clear_selected(){
             type:"POST",
             url:"clear_selected?field="+GetQueryString("field"),
             contentType: "application/json;charset=utf-8",
-            data:JSON.stringify(items),
             success:function (data) {
                 alert('删除成功!');
                 $(location).attr("href", "fieldlib.html?field=" + GetQueryString("field"));
@@ -48,36 +47,50 @@ function clear_selected(){
 function selectBox(obj){
     var index=$("td[class='select']").index($(obj).parent());
     if($(obj).prop("checked")){        //选中
-        items.item[(target_page-1)*10+index].selected=true;
+        items.item[index].selected=1;
     }
-    else{
-        items.item[(target_page-1)*10+index].selected=false;
+    else {
+        items.item[index].selected = 0;
     }
+    items.item[index].entity=items.item[index].entity.replace(/\+/g,"%2B");
+    items.item[index].entity=items.item[index].entity.replace(/\&/g,"%26");
+    $.post("result-select?field=" + GetQueryString("field")+"&entity="+items.item[index].entity+"&selected="+items.item[index].selected,function(data,statu){
+    });
 }
 
-function getPage(page) {
-    var count=0;
-    for (var i = (page - 1) * 10; i < page * 10 && i < items["item"].length && i < item_num; i++) {
-        if(items["item"][i]["selected"]) {
-            $("#result_table").append($('<tr>' +
-                '                           <td class="order">' + (i + 1) + '</td>' +
-                '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
-                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox" checked/></td>' +
-                '                       </tr>'));
-            count++;
+function getPage(page){
+    if(page_num==0)
+        return;
+    $.ajax({
+        type: "POST",
+        url: "getFieldLibPage?field=" + GetQueryString("field")+"&page="+page,
+        contentType: "application/json;charset=utf-8",
+        data: JSON.stringify(items),
+        success: function (data) {
+            var count=0;
+            items["item"]=data["item"];
+            for(var i=0; i<10 && i<data["item"].length;i++){
+                $("#result_table").append($('<tr>' +
+                    '                           <td class="order">' + ((page-1)*10+i+1) + '</td>' +
+                    '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
+                    '                           <td class="select"><input onclick="selectBox(this)" class="form-check-input select_item" type="checkbox"/></td>' +
+                    '                       </tr>'));
+                if(data["item"][i]["selected"]==1){
+                    $($(".select_item")[i]).prop("checked",true);
+                    count++;
+                }
+            }
+            if(count==data["item"].length && $("input[name='select_table']").prop("checked")==false){
+                $("input[name='select_page']").prop("checked",true);
+            }
+            else
+                $("input[name='select_page']").prop("checked",false);
+        },
+        error: function (message) {
+            console.log(message);
         }
-        else{
-            $("#result_table").append($('<tr>' +
-                '                           <td class="order">' + (i + 1) + '</td>' +
-                '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
-                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>' +
-                '                       </tr>'));
-        }
-    }
-    if(count==10 || (target_page-1)*10+count>=items["item"].length)
-        $("input[name='select_page']").prop("checked",true);
-    else
-        $("input[name='select_page']").prop("checked",false);
+    });
+
 }
 
 function clearPage() {
@@ -92,7 +105,7 @@ function clearPage() {
 }
 
 function regulatePage(target_page) {
-    $("#pagen a").text(item_num %10==0 ? item_num/10 : Math.ceil(item_num/10));
+    $("#pagen a").text(page_num);
     if (target_page != 1) {
         $("ul[class='uk-tab'] li").each(function () {
             if ($(this).attr("id") != "pagen") {
@@ -162,39 +175,20 @@ function regulatePage(target_page) {
 
 $(function () {
     target_page = 1;     //初始时第一页
-    $.post("fieldlib?field=" + GetQueryString("field"), function (data, status) {
-        items = data;
-        item_num = data["item"].length;
-        items["item"].sort(function (a, b) {
-            var i;
-            for(i=0;i<a.entity.length;i++){
-                if(i>=b.entity.length) {
-                    return 1;
-                }
-                else if(a.entity[i]==b.entity[i])
-                    continue;
-                else{
-                    return a.entity[i].localeCompare(b.entity[i],'zh-CN');
-                }
-            }
-            if(a.entity.length==b.entity.length){
-                return 0;
-            }
-            else{
-                return -1;
-            }
-        });
-        var i;
-
-        for (i = 0; i < 10 && i<item_num; i++) {
-            $("#result_table").append($('<tr>' +
-                '                           <td class="order">' + (i + 1) + '</td>' +
-                '                           <td class="entity">' + items["item"][i]["entity"] + '</td>' +
-                '                           <td class="select"><input onclick="selectBox(this)" class="select_item" type="checkbox"/></td>'+
-                '                       </tr>'));
+    $.ajax({
+        type: "POST",
+        url: "getPageNum?field=" + GetQueryString("field")+"&name="+GetQueryString("name"),
+        contentType: "application/json;charset=utf-8",
+        data:JSON.stringify(items),
+        success:function(data,statu){
+            page_num=data.page_num;
+            target_page=1;
+            clearPage();
+            items["item"]=new Array();
+            getPage(target_page);
+            $("#pagen a").text(page_num);
+            regulatePage(1);
         }
-        regulatePage(1);
-        $("input[name='select_page']").prop("checked",false);
     });
 
     //点击切换页面标签
@@ -229,22 +223,34 @@ $(function () {
             });
     });
 
-    $("input[name='select_page']").change(function () {     //本页全选
-        if($(this).prop("checked")==true){            //选中
-            var i;
-            for(i=0;i< 10 && (target_page-1)*10+i<items["item"].length;i++){
-                items.item[(target_page-1)*10+i]["selected"]=true;
-                $($("input[class='select_item']")[i]).prop("checked",true);
-            }
+    $("#firstPage").click(function () {
+        if(page_num>0){
+            target_page=1;
+            clearPage();
+            getPage(1);
+            regulatePage(1);
         }
-        else{
-            var i;
-            for(i=0;i< 10 && (target_page-1)*10+i<items["item"].length;i++){
-                items.item[(target_page-1)*10+i]["selected"]=false;
-                $($("input[class='select_item']")[i]).prop("checked",false);
-            }
-        }
+    });
 
+    $("input[name='select_page']").change(function () {     //本页全选
+        if ($(this).prop("checked") == true) {            //选中
+            $("input[name='select_table']").prop("checked", false);
+            var i;
+            for (i = 0; i < items["item"].length; i++) {
+                $(".select_item").get(i).checked = true;
+            }
+            for (var j = 0; j < items["item"].length; j++) {
+                selectBox($(".select_item")[j]);
+            }
+        } else {
+            var i;
+            for (i = 0; i < items["item"].length; i++) {
+                $(".select_item").get(i).checked = false;
+            }
+            for (var j = 0; j < items["item"].length; j++) {
+                selectBox($(".select_item")[j]);
+            }
+        }
     });
 
 });

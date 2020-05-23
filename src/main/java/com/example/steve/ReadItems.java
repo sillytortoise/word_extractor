@@ -42,14 +42,6 @@ public class ReadItems implements Runnable{
             JSONObject json=new JSONObject();
             ArrayList<JSONObject> items=new ArrayList<>();
 
-            SteveApplication.buffer.put(user,json);
-            json.put("items",items);
-            json.put("taskname",field+"_"+name);
-            json.put("finish_load",false);
-            state.put("filter","全选");
-            state.put("filter_num",0);
-            state.put("new_or_all","all");
-            json.put("state",state);
 
             int flag;
             if (!DBConnection.validateTableExist(user + "_" + field))

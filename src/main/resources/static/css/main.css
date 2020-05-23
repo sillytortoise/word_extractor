@@ -91,7 +91,7 @@ section{
     color: #444444;
 }
 
-#field_list th,td{
+#field_list th,#field_list td{
     position: relative;
     width:16.7%;
 }
@@ -216,7 +216,7 @@ tr{
     background-color: #3399ff;
 }
 
-#float_window {
+#float_window,#float_window_baike {
     display: none;
     position:fixed;
     left: 15%;
@@ -286,6 +286,7 @@ td.point{
 }
 
 label{
+    margin-left: 0;
     font-size: 10pt;
 }
 .uk-card-footer{
@@ -313,8 +314,9 @@ label{
     height: 450px;
 }
 
+
 input[type=checkbox] {
-    margin-right: 5px;
+    margin-left: 5px;
     cursor: pointer;
     font-size: 14px;
     width: 15px;
@@ -331,6 +333,7 @@ input[type=radio] {
     width: 15px;
     height: 12px;
     position: relative;
+    display: inline;
 }
 
 input[type=radio]:after {
@@ -339,7 +342,6 @@ input[type=radio]:after {
     height: 15px;
     top: 0;
     content: " ";
-    background-color: #ff0000;
     color: #fff;
     display: inline-block;
     visibility: visible;
@@ -358,4 +360,8 @@ input[type=radio]:checked:before {
     color: #fff;
     font-weight: 400;
     z-index: 1;
+}
+
+#task_table th,#task_table td{
+    width:16.7%;
 }
