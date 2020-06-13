@@ -1,10 +1,13 @@
-package com.example.steve;
+package com.extraction.steve;
 
 import com.alibaba.fastjson.JSONObject;
+import com.extraction.controllers.SteveApplication;
 
 import java.io.*;
 import java.sql.*;
 import java.util.*;
+
+import static com.extraction.controllers.SteveApplication.getTime;
 
 public class TaskProcessor implements Runnable {
     private String user;
@@ -140,14 +143,15 @@ public class TaskProcessor implements Runnable {
                         String line_field;
                         /*统一格式，消除中括号*/
 
-//                        Connection conn1 = DBConnection.getConn();
-//                        conn1.setAutoCommit(false);
+                        Connection conn1 = DBConnection.getConn();
+                        conn1.setAutoCommit(false);
                         try {
-//                            //建表存储词库抽取结果
-//                            String create_field_table = "create table `" + user + "_" + task_name.replace(":", "_") + "` (entity varchar(20) primary key, point double, selected boolean)";
-//                            Statement st = conn1.createStatement();
-//                            st.execute(create_field_table);
-//                            String insert_entity = "insert ignore into `" + user + "_" + task_name.replace(":", "_") + "` values (?,?,0)";
+                            //建表存储词库抽取结果
+                            String table_name=user + "_" + task_name.substring(0,task_name.indexOf(":")) + "_领_"+task_name.substring(task_name.indexOf(":")).substring(6);
+                            String create_field_table = "create table `" + user + "_" + task_name.substring(0,task_name.indexOf(":")) + "_领_"+task_name.substring(task_name.indexOf(":")).substring(6)+"` (entity varchar(50) primary key, point double, isselected bit)";
+                            Statement st = conn1.createStatement();
+                            st.execute(create_field_table);
+                            String insert_entity = "insert ignore into `" + table_name+ "` values (?,?,0)";
 //                            //抽取结果入库
                             while ((line_field = br_field.readLine()) != null) {
                                 int separator = line_field.indexOf('[');
@@ -160,28 +164,28 @@ public class TaskProcessor implements Runnable {
                                 }
                                 String line_result = former_part + latter_part_modified + "\n";
                                 fw_field.write(line_result);
-//                                PreparedStatement ptmt = conn1.prepareStatement(insert_entity);
-//                                ptmt.setString(1, latter_part_modified);
-//                                ptmt.setString(2, former_part.trim());
-//                                ptmt.executeUpdate();
-//                                ptmt.close();
+                                PreparedStatement ptmt = conn1.prepareStatement(insert_entity);
+                                ptmt.setString(1, latter_part_modified);
+                                ptmt.setString(2, former_part.trim());
+                                ptmt.executeUpdate();
+                                ptmt.close();
                             }
-//                            conn1.commit();
+                            conn1.commit();
                         } catch(Exception e){
                             e.printStackTrace();
-//                            conn1.rollback();
+                            conn1.rollback();
                         }
 
                         fin.close();
                         isr.close();
                         br_field.close();
                         fw_field.close();
-                        //conn1.close();
+                        conn1.close();
                         SteveApplication.fields.remove(field);
                     }
                 } else if (task_name.charAt(task_name.indexOf(':') + 1) == '基') {       //基于百科的抽取
                     String select_seed = "select * from `field` where `uid`='" + user + "' and `domain`='" + field + "'";
-                    File seed_file = new File(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" +
+                    File seed_file = new File(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" +           //seed entity
                             task_name.substring(task_name.indexOf(':') + 1) + "/" + field + "_seed_entity.txt");
                     if (!seed_file.exists()) {
                         seed_file.createNewFile();
@@ -250,18 +254,32 @@ public class TaskProcessor implements Runnable {
                     result.createNewFile();
                     FileWriter fw_baike = new FileWriter(result);
                     String line = null;
+                    Connection conn1=DBConnection.getConn();
+                    Statement st1=conn1.createStatement();
+                    String num=task_name.split(":")[1].substring(7);
+                    String table_name=user+"_"+field+"_基_"+num;
+                    String create_table="create table `"+table_name+"` (entity varchar(50) primary key,point double,isselected bit)";
+                    String insert="insert into "+table_name+" values(?,?,0)";
+                    st1.execute(create_table);
+                    PreparedStatement ps=conn.prepareStatement(insert);
                     while ((line = br.readLine()) != null) {
                         String[] ss = line.split("  ");
                         String each_line = ss[1] + "\t" + ss[0] + "\n";
+                        ps.setString(1,ss[0]);
+                        ps.setString(2,ss[1]);
+                        ps.executeUpdate();
                         fw_baike.write(each_line);
                     }
                     fin.close();
                     isr.close();
                     br.close();
                     fw_baike.close();
+                    st1.close();
+                    conn1.close();
                     conn.close();
                     SteveApplication.fields_baike.remove(field);
                 } else {                       //实体扩充
+                    String num=task_name.split(":")[1].substring(4);
                     String select_entity_set = "select entity from `" + user + "_" + field + "`";
                     ResultSet rs = stmt.executeQuery(select_entity_set);
                     String folder_path = SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/";
@@ -292,12 +310,41 @@ public class TaskProcessor implements Runnable {
                     }
                     rs1.close();
                     stmt.close();
-                    conn.close();
                     while (SteveApplication.fields_entity.contains(field)) {
                         Thread.sleep(1000);
                     }
                     SteveApplication.fields_entity.add(field);
                     Runtime.getRuntime().exec("sh /datamore/cc/knowledge/entity.sh " + folder_path + " " + SteveApplication.entitydir + " " + field).waitFor();
+                    String select_concept="select concept_word from `"+user+"_"+field+"_concept`";
+                    String create_concept_table="create table `%s` (" +
+                            "entity varchar(50) primary key," +
+                            "point double," +
+                            "isselected bit)";
+                    Statement st=conn.createStatement();
+                    ResultSet r=st.executeQuery(select_concept);
+                    while(r.next()){
+                        String concept=r.getString(1);
+                        Statement statement=conn.createStatement();
+                        statement.execute(String.format(create_concept_table, user+"_"+field+"_实_"+num+"_"+concept));
+                        File concept_results=new File(folder_path+field+"_"+concept+"_rank.txt");
+                        BufferedReader bufferedReader=new BufferedReader(new FileReader(concept_results));
+                        String line=null;
+                        String insert="insert ignore into "+user+"_"+field+"_实_"+num+"_"+concept+" values(?,?,0)";
+                        PreparedStatement preparedStatement=conn.prepareStatement(insert);
+                        while((line=bufferedReader.readLine())!=null){
+                            String entity=line.split("  ")[0];
+                            String point=line.split("  ")[1].trim();
+                            preparedStatement.setString(1,entity);
+                            preparedStatement.setString(2,point);
+                            preparedStatement.executeUpdate();
+                        }
+                        preparedStatement.close();
+                        bufferedReader.close();
+                        statement.close();
+                    }
+                    r.close();
+                    st.close();
+                    conn.close();
                     SteveApplication.fields_entity.remove(field);
                 }
 
@@ -306,7 +353,7 @@ public class TaskProcessor implements Runnable {
                 String error_statu = "update `" + user + "_task` set statu='任务失败' where task_name='" + task_name.substring(task_name.indexOf(':') + 1) + "' and domain='" + field + "'";
                 String finish_statu = "update `" + user + "_task` set statu='已完成'," +
                         "result='" + SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result.txt', " +
-                        "finish_time='" + MainController.getTime() + "' where task_name='" + task_name.substring(task_name.indexOf(':') + 1) + "' and domain='" + field + "'";
+                        "finish_time='" + getTime() + "' where task_name='" + task_name.substring(task_name.indexOf(':') + 1) + "' and domain='" + field + "'";
                 if(task_name.charAt(task_name.indexOf(':') + 1) == '领' || task_name.charAt(task_name.indexOf(':') + 1) == '基') {
                     if (new File(SteveApplication.rootdir + "/" + user + "/" + field + "/mission/" + task_name.substring(task_name.indexOf(':') + 1) + "/result.txt").exists()) {
                         statement.executeUpdate(finish_statu);

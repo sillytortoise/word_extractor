@@ -1,13 +1,10 @@
-package com.example.steve;
+package com.extraction.controllers;
 
-import org.apache.ibatis.jdbc.SQL;
-import org.springframework.boot.Banner;
+import com.extraction.steve.DBConnection;
+import com.extraction.steve.MD5Utils;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
-
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -31,13 +28,13 @@ public class Login {
 
     @RequestMapping(value="login.html",method = RequestMethod.POST)
     public String do_login(HttpServletRequest request,HttpServletResponse response) throws SQLException, IOException {
-        Connection conn=DBConnection.getConn();
+        Connection conn= DBConnection.getConn();
         String uid=request.getParameter("user");
         String passwd=request.getParameter("passwd");
         String check_user="select * from `user` where uid=? and passwd=?";
         PreparedStatement ptmt=conn.prepareStatement(check_user);
         ptmt.setString(1,uid);
-        ptmt.setString(2,MD5Utils.MD5Encode(passwd,"utf8"));
+        ptmt.setString(2, MD5Utils.MD5Encode(passwd,"utf8"));
         ResultSet rs=ptmt.executeQuery();
         if(rs.next()){
             conn.close();

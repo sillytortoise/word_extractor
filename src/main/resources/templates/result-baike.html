@@ -65,8 +65,9 @@
                 <th class="point">分数</th>
                 <th class="select">
                     <p>选择</p>
-                    <div>
+                    <div style="text-align: left">
                         <label><input class="form-check-input" type="checkbox" name="select_page"/>本页选择</label><br>
+                        <label><input type="checkbox" class="form-check-input" name="select_filtered"/>筛选结果全选</label>
                         <label><input class="form-check-input" type="checkbox" name="select_table"/>本表全选</label>
                     </div>
                 </th>
@@ -80,6 +81,7 @@
     </div>
     <div class="uk-card-footer" style="margin: 0 auto; width: 1300px">
         <ul class="uk-tab" style="width: auto;margin: 0 auto">
+            <button id="firstPage" class="btn btn-outline-primary" style="display: inline">首页</button>
             <li id="page1" class="uk-active"><a>1</a></li>
             <li id="page2"><a>2</a></li>
             <li id="page3"><a>3</a></li>

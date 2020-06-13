@@ -132,10 +132,9 @@
                                 $(location).attr("href","login.html");
                             }
                             else if(task_type==2 && data.stat==1){
-                                alert("创建失败，请设置种子词或进行领域词抽取！");
+                                alert("创建失败，请设置种子词或进行领域词抽取并将结果入库！");
                             }
                             else if(task_type==2 && data.stat==2){
-                                console.log(data);
                                 $("#select_category").empty();
                                 $("#select_category").append($('<tbody></tbody>'));
                                 var i;

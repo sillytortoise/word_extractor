@@ -1,17 +1,18 @@
-package com.example.steve;
+package com.extraction.controllers;
 
-import com.alibaba.fastjson.JSONObject;
+import com.extraction.steve.DBConnection;
+import com.extraction.steve.TaskListener;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 
 import javax.annotation.PostConstruct;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 
@@ -60,6 +61,27 @@ public class SteveApplication {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public static String getFileSize(long size_str){
+        String size = "";
+        DecimalFormat df = new DecimalFormat("#.00");
+        if (size_str < 1024) {
+            size = df.format((double) size_str) + "B";
+        } else if (size_str < 1048576) {
+            size = df.format((double) size_str / 1024) + "KB";
+        } else if (size_str < 1073741824) {
+            size = df.format((double) size_str / 1048576) + "MB";
+        } else {
+            size = df.format((double) size_str / 1073741824) +"GB";
+        }
+        return size;
+    }
+
+    public static String getTime() {
+        Long time_stamp=System.currentTimeMillis();
+        SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        return sdf.format(new Date(Long.parseLong(String.valueOf(time_stamp))));      // 时间戳转换成时间
     }
 
 }

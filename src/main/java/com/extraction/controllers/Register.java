@@ -1,16 +1,14 @@
-package com.example.steve;
+package com.extraction.controllers;
 
 import com.alibaba.fastjson.JSONObject;
+import com.extraction.steve.DBConnection;
+import com.extraction.steve.MD5Utils;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.*;
 
 @Controller
@@ -23,7 +21,7 @@ public class Register {
     @RequestMapping(value="register.html",produces ="application/json;charset=UTF-8",method = RequestMethod.POST)
     public @ResponseBody
     JSONObject register(@RequestBody String data) throws SQLException, IOException, InterruptedException {
-        Connection conn=DBConnection.getConn();
+        Connection conn= DBConnection.getConn();
         String user_name=JSONObject.parseObject(data).get("user").toString();
         JSONObject json=new JSONObject();
         if(user_name.length()==0){
@@ -55,7 +53,7 @@ public class Register {
             String create_account="insert into `user` values(?,?)";
             PreparedStatement ptmt=conn.prepareStatement(create_account);
             ptmt.setString(1,user_name);
-            ptmt.setString(2,MD5Utils.MD5Encode(passwd,"utf8"));
+            ptmt.setString(2, MD5Utils.MD5Encode(passwd,"utf8"));
             int n=ptmt.executeUpdate();
             String create_table="create table `"+user_name+"_task`("+
                     "domain varchar(50),"+

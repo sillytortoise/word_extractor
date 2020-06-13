@@ -108,7 +108,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.example.steve.SteveApplication</mainClass>
+                    <mainClass>com.extraction.controllers.SteveApplication</mainClass>
                     <layout>ZIP</layout>
                 </configuration>
 
